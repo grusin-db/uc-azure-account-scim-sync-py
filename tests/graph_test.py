@@ -18,10 +18,10 @@ logger = logging.getLogger('sync')
 def client():
     tenant_id = os.getenv('ARM_TENANT_ID')
     assert tenant_id
-    
+
     spn_id = os.getenv('ARM_CLIENT_ID')
     assert spn_id
-    
+
     spn_key = os.getenv('ARM_CLIENT_SECRET')
     assert spn_key
 
