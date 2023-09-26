@@ -44,3 +44,8 @@ def test_get_group_members(client: GraphAPIClient):
     assert group_members
     assert isinstance(group_members, list)
     logging.info(f"members: {json.dumps(group_members, indent=4)}")
+
+
+def test_non_existing_group(client: GraphAPIClient):
+    group_info = client.get_group_by_name("bla-bla-does-not-exist")
+    assert group_info is None
