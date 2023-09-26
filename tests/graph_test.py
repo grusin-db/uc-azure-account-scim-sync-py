@@ -7,10 +7,6 @@ import pytest
 
 from azure_dbr_scim_sync.graph import GraphAPIClient
 
-tenant_id = os.getenv('ARM_TENANT_ID')
-spn_id = os.getenv('ARM_CLIENT_ID')
-spn_key = os.getenv('ARM_CLIENT_SECRET')
-
 logging.basicConfig(stream=sys.stderr,
                     level=(logging.DEBUG),
                     format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -21,11 +17,12 @@ logger = logging.getLogger('sync')
 @pytest.fixture()
 def client():
     tenant_id = os.getenv('ARM_TENANT_ID')
-    spn_id = os.getenv('ARM_CLIENT_ID')
-    spn_key = os.getenv('ARM_CLIENT_SECRET')
-
     assert tenant_id
+    
+    spn_id = os.getenv('ARM_CLIENT_ID')
     assert spn_id
+    
+    spn_key = os.getenv('ARM_CLIENT_SECRET')
     assert spn_key
 
     return GraphAPIClient(tenant_id=tenant_id, spn_id=spn_id, spn_key=spn_key)
