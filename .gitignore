@@ -5,6 +5,8 @@ __pycache__/
 
 # project
 .env.sh
+.junittest*.xml
+coverage/
 
 # C extensions
 *.so
