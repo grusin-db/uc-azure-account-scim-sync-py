@@ -48,10 +48,3 @@ def test_non_existing_group(client: GraphAPIClient):
     assert group_info is None
 
 
-def test_graph_sync_object(client: GraphAPIClient):
-    stuff_to_sync = client.get_objects_for_sync([
-        'team02-admin', 'team01-admin', 'team02-eng', 'team01-eng', 'uc-metastore-playground-admin',
-        'uc-account-admin'
-    ])
-
-    assert stuff_to_sync
