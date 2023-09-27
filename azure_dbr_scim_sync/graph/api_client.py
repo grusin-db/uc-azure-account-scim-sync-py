@@ -1,4 +1,33 @@
+from typing import Dict, Optional, List
+
 import requests
+from pydantic import AliasChoices, BaseModel, Field
+
+
+class GraphBase(BaseModel):
+    id: str = Field()
+    display_name: str = Field(validation_alias=AliasChoices('displayName'))
+    created_ts: Optional[str] = Field(validation_alias=AliasChoices('createdDateTime'), default=None)
+    deleted_ts: Optional[str] = Field(validation_alias=AliasChoices('deletedDateTime'), default=None)
+
+
+class GraphUser(GraphBase):
+    user_name: str = Field(validation_alias=AliasChoices('mail'))
+    active: bool = Field(validation_alias=AliasChoices('accountEnabled'))
+
+
+class GraphServicePrincipal(GraphBase):
+    application_id: str = Field(validation_alias=AliasChoices('appId'))
+
+
+class GraphGroup(GraphBase):
+    members: Optional[Dict[str, GraphBase]] = Field(default_factory=lambda: {})
+
+class GraphSyncObject(BaseModel):
+    users: Optional[Dict[str, GraphUser]] = Field(default_factory=lambda: {})
+    service_principals: Optional[Dict[str, GraphServicePrincipal]] = Field(default_factory=lambda: {})
+    groups: Optional[Dict[str, GraphGroup]] = Field(default_factory=lambda: {})
+    errors: Optional[List] = Field(default_factory=lambda: [])
 
 
 class GraphAPIClient:
@@ -48,3 +77,61 @@ class GraphAPIClient:
         res.raise_for_status()
 
         return res.json().get("value")
+
+    def get_objects_for_sync(self, group_names):
+        sync_data = GraphSyncObject()
+
+        def _register_user(d):
+            id = d['id']
+            if id not in sync_data.users:
+                try:
+                    sync_data.users[id] = GraphUser(**d)
+                except Exception as e:
+                    return e
+
+            return sync_data.users[id]
+
+        def _register_service_principal(d):
+            id = d['id']
+            if id not in sync_data.service_principals:
+                try:
+                    sync_data.service_principals[id] = GraphServicePrincipal(**d)
+                except Exception as e:
+                    return e
+
+            return sync_data.service_principals[id]
+
+        def _register_group(d):
+            id = d['id']
+            if id not in sync_data.groups:
+                try:
+                    sync_data.groups[id] = GraphGroup(**d)
+                except Exception as e:
+                    return e
+
+            return sync_data.groups[id]
+
+        for group_name in group_names:
+            group_info = self.get_group_by_name(group_name)
+            group_members = self.get_group_members(group_info['id'])
+
+            _register_group(group_info)
+
+            group = sync_data.groups[group_info['id']]
+
+            for m in group_members:
+                if m['@odata.type'] == '#microsoft.graph.user':
+                    r = _register_user(m)
+
+                if m['@odata.type'] == '#microsoft.graph.servicePrincipal':
+                    r = _register_service_principal(m)
+
+                if m['@odata.type'] == '#microsoft.graph.group':
+                    r = _register_group(m)
+
+                if isinstance(r, Exception):
+                    sync_data.errors.append((m, r))
+                else:
+                    group.members[r.id] = r
+
+        return sync_data
