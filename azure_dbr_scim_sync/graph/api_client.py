@@ -3,6 +3,8 @@ from typing import Dict, List, Optional
 import requests
 from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 class GraphBase(BaseModel):
@@ -50,12 +52,28 @@ class GraphAPIClient:
 
     def __init__(self, tenant_id: str, spn_id: str, spn_key: str):
         self._tenant_id = tenant_id
+
+        retry_strategy = Retry(
+            total=6,
+            backoff_factor=1,
+            status_forcelist=[429],
+            respect_retry_after_header=True,
+            raise_on_status=False, # return original response when retries have been exhausted
+        )
+
+        self._session = requests.Session()
+
+        http_adapter = HTTPAdapter(max_retries=retry_strategy,
+                                   pool_connections=20,
+                                   pool_maxsize=20,
+                                   pool_block=True)
+        self._session.mount("https://", http_adapter)
+
         self._token = self._get_access_token(tenant_id, spn_id, spn_key)
         self._header = {"Authorization": f"Bearer {self._token}"}
         self._base_url = "https://graph.microsoft.com/"
 
-    @classmethod
-    def _get_access_token(cls, tenant_id, spn_id, spn_key):
+    def _get_access_token(self, tenant_id, spn_id, spn_key):
         post_data = {
             'client_id': spn_id,
             'scope': 'https://graph.microsoft.com/.default',
@@ -63,14 +81,14 @@ class GraphAPIClient:
             'grant_type': 'client_credentials'
         }
         initial_header = {'Content-type': 'application/x-www-form-urlencoded'}
-        res = requests.post(f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
-                            data=post_data,
-                            headers=initial_header)
+        res = self._session.post(f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+                                 data=post_data,
+                                 headers=initial_header)
         res.raise_for_status()
         return res.json().get("access_token")
 
     def get_group_by_name(self, name: str) -> dict:
-        res = requests.get(
+        res = self._session.get(
             f"https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '{name}'&$select=id,displayName",
             headers=self._header)
 
@@ -84,8 +102,8 @@ class GraphAPIClient:
         return None
 
     def get_group_members(self, group_id: str, select="id,displayName,mail,appId,accountEnabled") -> dict:
-        res = requests.get(f"{self._base_url}/beta/groups/{group_id}/members?$select={select}",
-                           headers=self._header)
+        res = self._session.get(f"{self._base_url}/beta/groups/{group_id}/members?$select={select}",
+                                headers=self._header)
 
         res.raise_for_status()
 

@@ -46,5 +46,3 @@ def test_get_group_members(client: GraphAPIClient):
 def test_non_existing_group(client: GraphAPIClient):
     group_info = client.get_group_by_name("bla-bla-does-not-exist")
     assert group_info is None
-
-
