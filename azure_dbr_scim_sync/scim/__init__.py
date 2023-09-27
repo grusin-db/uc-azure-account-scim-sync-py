@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 
 @dataclass
-class SCIMResult(Generic[T]):
+class MergeResult(Generic[T]):
     desired: T
     actual: T
     action: str
@@ -17,7 +17,7 @@ class SCIMResult(Generic[T]):
 def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
                               dry_run: bool) -> List[T]:
     total_changes = []
-    DiffClass = SCIMResult[T]
+    DiffClass = MergeResult[T]
 
     desired_dict = desired.as_dict()
     if not len(actual_objects):

@@ -54,4 +54,5 @@ def test_graph_sync_object(graph_client: GraphAPIClient, account_client: Account
                                           [x.to_sdk_group() for x in stuff_to_sync.groups.values()])
     spn_diff = create_or_update_service_principals(
         account_client, [x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()])
-
+    
+    pass
