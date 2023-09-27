@@ -6,7 +6,7 @@ import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
-from azure_dbr_scim_sync.scim.users import create_or_update_users
+from azure_dbr_scim_sync.scim import create_or_update_users, create_or_update_groups, delete_user_if_exists, delete_group_if_exists
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -36,9 +36,15 @@ def test_create_or_update_users(client: AccountClient):
                  active=True) for idx in range(0, 5)
     ]
 
-    # set the stage
+    # pre-delete
+    for u in users:
+        delete_user_if_exists(client, u.user_name)
+
+    # create users
     diff = create_or_update_users(client, users)
-    assert diff is not None
+    assert len(diff) == 5
+    for u in diff:
+        u.action == "new"
 
     # do actual changes
     users2 = [
@@ -57,3 +63,24 @@ def test_create_or_update_users(client: AccountClient):
     # next run should do no changes
     diff3 = create_or_update_users(client, users2)
     assert len(diff3) == 0
+
+
+def test_create_or_update_groups(client: AccountClient):
+    groups = [
+        iam.Group(display_name=f"test-example-grp-{idx}", external_id=f"abc-grp-{idx}")
+        for idx in range(0, 5)
+    ]
+
+    # pre-delete
+    for g in groups:
+        delete_group_if_exists(client, g.display_name)
+
+    # create groups
+    diff = create_or_update_groups(client, groups)
+    assert len(diff) == 5
+    for u in diff:
+        u.action == "new"
+
+    # next run should do no changes
+    diff2 = create_or_update_groups(client, groups)
+    assert len(diff2) == 0

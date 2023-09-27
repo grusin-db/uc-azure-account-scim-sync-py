@@ -7,23 +7,23 @@ T = TypeVar("T")
 
 
 @dataclass
-class GenericDiffClass(Generic[T]):
+class _GenericDiffClass(Generic[T]):
     desired: T
     actual: T
     action: str
     changes: Optional[List[iam.Patch]]
 
 
-def generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
-                             dry_run: bool) -> List[T]:
+def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
+                              dry_run: bool) -> List[T]:
     total_changes = []
-    DiffClass = GenericDiffClass[T]
+    DiffClass = _GenericDiffClass[T]
 
     desired_dict = desired.as_dict()
     if not len(actual_objects):
         total_changes.append(DiffClass(desired=desired, actual=None, action="new", changes=None))
         if not dry_run:
-            sdk_module.create(**desired_dict)
+            sdk_module.create(**desired.__dict__)
     else:
         for actual in actual_objects:
             actual_dict = actual.as_dict()
@@ -43,3 +43,9 @@ def generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fi
                                      operations=operations)
 
     return total_changes
+
+
+from .groups import create_or_update_groups, delete_group_if_exists  # NOQA
+from .users import create_or_update_users, delete_user_if_exists  # NOQA
+
+__all__ = ['create_or_update_users', 'create_or_update_groups', 'delete_user_if_exists', 'delete_group_if_exists']
