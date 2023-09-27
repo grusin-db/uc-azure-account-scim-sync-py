@@ -7,8 +7,10 @@ from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
 from azure_dbr_scim_sync.scim import (create_or_update_groups,
+                                      create_or_update_service_principals,
                                       create_or_update_users,
                                       delete_group_if_exists,
+                                      delete_service_principal_if_exists,
                                       delete_user_if_exists)
 
 logging.basicConfig(stream=sys.stderr,
@@ -87,3 +89,35 @@ def test_create_or_update_groups(client: AccountClient):
     # next run should do no changes
     diff2 = create_or_update_groups(client, groups)
     assert len(diff2) == 0
+
+
+def test_create_or_update_service_principals(client: AccountClient):
+    spns = [
+        iam.ServicePrincipal(application_id=f"00000000-1337-1337-1337-00000000000{idx}",
+                             display_name=f"test-example-spn-{idx}",
+                             external_id=f"abc-spn-{idx}") for idx in range(0, 5)
+    ]
+
+    # pre-delete
+    for s in spns:
+        delete_service_principal_if_exists(client, s.application_id)
+
+    # create service prinsipals
+    diff = create_or_update_service_principals(client, spns)
+    assert len(diff) == 5
+    for u in diff:
+        u.action == "new"
+
+    # next run should do no changes
+    diff2 = create_or_update_service_principals(client, spns)
+    assert len(diff2) == 0
+
+    # make some changes
+    spns2 = [
+        iam.ServicePrincipal(application_id=f"00000000-1337-1337-1337-00000000000{idx}",
+                             display_name=f"test-example-spn-{idx}-fancy",
+                             external_id=f"abc-spn-{idx}") for idx in range(0, 5)
+    ]
+
+    diff3 = create_or_update_service_principals(client, spns2)
+    assert len(diff3) == 5

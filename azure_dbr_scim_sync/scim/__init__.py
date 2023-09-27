@@ -46,8 +46,11 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
 
 
 from .groups import create_or_update_groups, delete_group_if_exists  # NOQA
+from .service_principals import create_or_update_service_principals  # NOQA
+from .service_principals import delete_service_principal_if_exists  # NOQA
 from .users import create_or_update_users, delete_user_if_exists  # NOQA
 
 __all__ = [
-    'create_or_update_users', 'create_or_update_groups', 'delete_user_if_exists', 'delete_group_if_exists'
+    'create_or_update_users', 'create_or_update_groups', 'delete_user_if_exists', 'delete_group_if_exists',
+    'create_or_update_service_principals', 'delete_service_principal_if_exists'
 ]

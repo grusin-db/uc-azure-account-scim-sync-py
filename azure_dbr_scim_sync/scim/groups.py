@@ -11,10 +11,10 @@ def delete_group_if_exists(client: AccountClient, group_name: str):
         client.groups.delete(g.id)
 
 
-def create_or_update_groups(client: AccountClient, desired_users: List[iam.Group], dry_run=False):
+def create_or_update_groups(client: AccountClient, desired_groups: List[iam.Group], dry_run=False):
     total_differences = []
 
-    for desired in desired_users:
+    for desired in desired_groups:
         total_differences.extend(
             _generic_create_or_update(
                 desired=desired,
