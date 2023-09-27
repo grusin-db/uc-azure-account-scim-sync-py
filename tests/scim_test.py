@@ -6,7 +6,10 @@ import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
-from azure_dbr_scim_sync.scim import create_or_update_users, create_or_update_groups, delete_user_if_exists, delete_group_if_exists
+from azure_dbr_scim_sync.scim import (create_or_update_groups,
+                                      create_or_update_users,
+                                      delete_group_if_exists,
+                                      delete_user_if_exists)
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,

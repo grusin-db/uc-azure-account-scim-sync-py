@@ -5,9 +5,11 @@ from databricks.sdk.service import iam
 
 from . import _generic_create_or_update
 
+
 def delete_group_if_exists(client: AccountClient, group_name: str):
     for g in client.groups.list(filter=f"displayName eq '{group_name}'"):
         client.groups.delete(g.id)
+
 
 def create_or_update_groups(client: AccountClient, desired_users: List[iam.Group], dry_run=False):
     total_differences = []
