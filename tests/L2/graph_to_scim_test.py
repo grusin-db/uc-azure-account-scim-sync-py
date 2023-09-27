@@ -48,7 +48,10 @@ def test_graph_sync_object(graph_client: GraphAPIClient, account_client: Account
         'uc-account-admin'
     ])
 
-    create_or_update_users(account_client, [x.to_sdk_user() for x in stuff_to_sync.users.values()])
-    create_or_update_groups(account_client, [x.to_sdk_group() for x in stuff_to_sync.groups.values()])
-    create_or_update_service_principals(
+    users_diff = create_or_update_users(account_client,
+                                        [x.to_sdk_user() for x in stuff_to_sync.users.values()])
+    groups_diff = create_or_update_groups(account_client,
+                                          [x.to_sdk_group() for x in stuff_to_sync.groups.values()])
+    spn_diff = create_or_update_service_principals(
         account_client, [x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()])
+

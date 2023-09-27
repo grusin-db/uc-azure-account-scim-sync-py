@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 
 @dataclass
-class _GenericDiffClass(Generic[T]):
+class SCIMResult(Generic[T]):
     desired: T
     actual: T
     action: str
@@ -17,7 +17,7 @@ class _GenericDiffClass(Generic[T]):
 def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
                               dry_run: bool) -> List[T]:
     total_changes = []
-    DiffClass = _GenericDiffClass[T]
+    DiffClass = SCIMResult[T]
 
     desired_dict = desired.as_dict()
     if not len(actual_objects):
@@ -33,10 +33,13 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
                 for field_name in compare_fields if desired_dict[field_name] != actual_dict.get(field_name)
             ]
 
-            if operations:
-                total_changes.append(
-                    DiffClass(desired=desired, actual=actual, action="change", changes=operations))
+            total_changes.append(
+                DiffClass(desired=desired,
+                          actual=actual,
+                          action="change" if operations else "no change",
+                          changes=operations))
 
+            if operations:
                 if not dry_run:
                     sdk_module.patch(actual.id,
                                      schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
