@@ -53,3 +53,5 @@ def test_graph_sync_object(client: GraphAPIClient):
         'team02-admin', 'team01-admin', 'team02-eng', 'team01-eng', 'uc-metastore-playground-admin',
         'uc-account-admin'
     ])
+
+    assert stuff_to_sync

@@ -1,25 +1,24 @@
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 import requests
-from pydantic import AliasChoices, BaseModel, Field
 from databricks.sdk.service import iam
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class GraphBase(BaseModel):
     id: str
     display_name: str = Field(validation_alias=AliasChoices('displayName'))
 
+
 class GraphUser(GraphBase):
     mail: str = Field(validation_alias=AliasChoices('mail'))
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
 
     def to_sdk_user(self):
-        return iam.User(
-            user_name=self.mail,
-            display_name=self.display_name,
-            active=self.active,
-            external_id=self.id
-        )
+        return iam.User(user_name=self.mail,
+                        display_name=self.display_name,
+                        active=self.active,
+                        external_id=self.id)
 
 
 class GraphServicePrincipal(GraphBase):
@@ -27,22 +26,17 @@ class GraphServicePrincipal(GraphBase):
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
 
     def to_sdk_service_principal(self):
-        return iam.ServicePrincipal(
-            application_id=self.application_id,
-            display_name=self.display_name,
-            active=self.active,
-            external_id=self.id
-        )
+        return iam.ServicePrincipal(application_id=self.application_id,
+                                    display_name=self.display_name,
+                                    active=self.active,
+                                    external_id=self.id)
 
 
 class GraphGroup(GraphBase):
     members: Optional[Dict[str, GraphBase]] = Field(default_factory=lambda: {})
 
     def to_sdk_group(self):
-        return iam.Group(
-            display_name=self.display_name,
-            external_id=self.id
-        )
+        return iam.Group(display_name=self.display_name, external_id=self.id)
 
 
 class GraphSyncObject(BaseModel):
@@ -89,10 +83,7 @@ class GraphAPIClient:
 
         return None
 
-    def get_group_members(
-            self,
-            group_id: str,
-            select="id,displayName,mail,appId,accountEnabled") -> dict:
+    def get_group_members(self, group_id: str, select="id,displayName,mail,appId,accountEnabled") -> dict:
         res = requests.get(f"{self._base_url}/beta/groups/{group_id}/members?$select={select}",
                            headers=self._header)
 

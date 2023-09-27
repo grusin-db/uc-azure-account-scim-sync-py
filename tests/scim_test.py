@@ -4,8 +4,9 @@ import sys
 
 import pytest
 from databricks.sdk import AccountClient
+from databricks.sdk.service import iam
 
-from azure_dbr_scim_sync.scim.users import DesiredUser, create_or_update_users
+from azure_dbr_scim_sync.scim.users import create_or_update_users
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -28,15 +29,31 @@ def test_smoke(client: AccountClient):
 
 
 def test_create_or_update_users(client: AccountClient):
+    users = [
+        iam.User(user_name=f"test{idx}@example.com",
+                 display_name=f"tester {idx}",
+                 external_id=f"abc-{idx}",
+                 active=True) for idx in range(0, 5)
+    ]
 
-    diff = create_or_update_users(client, [
-        DesiredUser(
-            user_name="test1@example.com", display_name="tester one 10", external_id="abc-1", active=True),
-        DesiredUser(
-            user_name="test2@example.com", display_name="tester two 10", external_id="abc-2", active=True),
-        DesiredUser(
-            user_name="test3@example.com", display_name="tester three 10", external_id="abc-3", active=True),
-        DesiredUser(user_name="test4@example.com", display_name="tester 10", external_id="abc-4", active=True)
-    ])
+    # set the stage
+    diff = create_or_update_users(client, users)
+    assert diff is not None
 
-    print(diff)
+    # do actual changes
+    users2 = [
+        iam.User(user_name=f"test{idx}@example.com",
+                 display_name=f"tester {idx} v2",
+                 external_id=f"abc-{idx}",
+                 active=True) for idx in range(0, 3)
+    ]
+
+    diff2 = create_or_update_users(client, users2)
+    assert len(diff2) == 3
+
+    assert diff2[0].action == "change"
+    assert diff2[0].changes[0].as_dict() == {'op': 'replace', 'path': 'displayName', 'value': 'tester 0 v2'}
+
+    # next run should do no changes
+    diff3 = create_or_update_users(client, users2)
+    assert len(diff3) == 0
