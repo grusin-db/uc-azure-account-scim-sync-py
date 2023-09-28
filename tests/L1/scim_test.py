@@ -1,23 +1,18 @@
 import logging
 import os
 import sys
+from typing import List
 
 import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
-from typing import List
-
-from azure_dbr_scim_sync.scim import sync, ScimSyncObject
-
-import pytest
-
-from azure_dbr_scim_sync.scim import (create_or_update_groups,
+from azure_dbr_scim_sync.scim import (ScimSyncObject, create_or_update_groups,
                                       create_or_update_service_principals,
                                       create_or_update_users,
                                       delete_group_if_exists,
                                       delete_service_principal_if_exists,
-                                      delete_user_if_exists)
+                                      delete_user_if_exists, sync)
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -143,19 +138,13 @@ def test_create_or_update_service_principals(account_client: AccountClient):
 
 
 def test_group_membership(account_client: AccountClient):
+
     def _verify_group_members(groups: List[iam.Group], sync_results: ScimSyncObject):
         for idx, g in enumerate(groups):
             id = sync_results.groups[idx].id
             data = account_client.groups.get(id)
 
-            assert set(
-                m.display
-                for m in data.members
-            ) == set(
-                m.display
-                for m in g.members
-            )
-
+            assert set(m.display for m in data.members) == set(m.display for m in g.members)
 
     users = [
         iam.User(user_name=f"test-end2end-{idx}@example.com",
@@ -165,19 +154,12 @@ def test_group_membership(account_client: AccountClient):
     ]
 
     groups = [
-        iam.Group(
-            display_name=f"test-end2end-grp-{idx}",
-            external_id=f"test-xyz-grp-end2end-{idx}",
-            members=[
-                iam.ComplexValue(
-                    display=u.display_name,
-                    value=u.external_id
-                )
-                for uidx, u in enumerate(users)
-                if uidx <= idx
-            ]
-            )
-        for idx in range(0, 5)
+        iam.Group(display_name=f"test-end2end-grp-{idx}",
+                  external_id=f"test-xyz-grp-end2end-{idx}",
+                  members=[
+                      iam.ComplexValue(display=u.display_name, value=u.external_id)
+                      for uidx, u in enumerate(users) if uidx <= idx
+                  ]) for idx in range(0, 5)
     ]
 
     # pre-delete
@@ -185,47 +167,30 @@ def test_group_membership(account_client: AccountClient):
         delete_user_if_exists(account_client, u.user_name)
 
     for g in groups:
-        delete_group_if_exists(account_client, g.display_name) 
+        delete_group_if_exists(account_client, g.display_name)
 
     # run twice, to ensure nothing changes 2nd time
     for _ in ["first", "2nd"]:
         # sync
-        sync_results = sync(
-            account_client=account_client,
-            users=users,
-            groups=groups,
-            service_principals=[])
+        sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
 
         # verify if groups mach the results
         _verify_group_members(groups, sync_results)
 
     # move the groups around
     groups = [
-        iam.Group(
-            display_name=f"test-end2end-grp-{idx}",
-            external_id=f"test-xyz-grp-end2end-{idx}",
-            members=[
-                iam.ComplexValue(
-                    display=u.display_name,
-                    value=u.external_id
-                )
-                for uidx, u in enumerate(users)
-                if uidx >= idx
-            ]
-            )
-        for idx in range(0, 5)
+        iam.Group(display_name=f"test-end2end-grp-{idx}",
+                  external_id=f"test-xyz-grp-end2end-{idx}",
+                  members=[
+                      iam.ComplexValue(display=u.display_name, value=u.external_id)
+                      for uidx, u in enumerate(users) if uidx >= idx
+                  ]) for idx in range(0, 5)
     ]
 
     # should fail on group members, because we did not run processing yet :P
     with pytest.raises(AssertionError):
         _verify_group_members(groups, sync_results)
 
-    sync_results = sync(
-        account_client=account_client,
-        users=users,
-        groups=groups,
-        service_principals=[]
-    )
+    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
 
     _verify_group_members(groups, sync_results)
-

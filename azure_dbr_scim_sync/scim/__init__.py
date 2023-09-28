@@ -113,7 +113,7 @@ def sync(account_client: AccountClient,
     }
 
     dbr_to_graph_ids = {
-        u.id :  u.external_id
+        u.id: u.external_id
         for u in itertools.chain(result.users, result.groups, result.service_principals)
     }
 
@@ -159,17 +159,13 @@ def sync(account_client: AccountClient,
                 iam.Patch(op=iam.PatchOp.ADD,
                           value={'members': [{
                               'value': x
-                          } for x in to_add_member_dbr_ids]})
-            )
+                          } for x in to_add_member_dbr_ids]}))
 
         if to_delete_member_dbr_ids:
             patch_operations.extend([
-                iam.Patch(
-                    op=iam.PatchOp.REMOVE,
-                    path=f"members[value eq \"{x}\"]"    
-                )
+                iam.Patch(op=iam.PatchOp.REMOVE, path=f"members[value eq \"{x}\"]")
                 for x in to_delete_member_dbr_ids
-            ])  
+            ])
 
         if patch_operations:
             group_merge_result.changes.extend(patch_operations)
