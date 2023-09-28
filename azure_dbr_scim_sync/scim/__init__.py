@@ -2,28 +2,48 @@ from dataclasses import dataclass
 from typing import Generic, Iterable, List, Optional, TypeVar
 
 from databricks.sdk.service import iam
+from copy import deepcopy
 
 T = TypeVar("T")
-
 
 @dataclass
 class MergeResult(Generic[T]):
     desired: T
     actual: T
+    created: T
     action: str
     changes: Optional[List[iam.Patch]]
+
+
+    @property
+    def external_id(self) -> str:
+        return self.desired.external_id
+
+    @property
+    def effective(self) -> T:
+        return self.created or self.actual
+
+    @property
+    def id(self) -> str:
+        return self.effective.id
 
 
 def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
                               dry_run: bool) -> List[T]:
     total_changes = []
-    DiffClass = MergeResult[T]
+    ResultClass = MergeResult[T]
 
     desired_dict = desired.as_dict()
     if not len(actual_objects):
-        total_changes.append(DiffClass(desired=desired, actual=None, action="new", changes=None))
+        created = None
+
         if not dry_run:
-            sdk_module.create(**desired.__dict__)
+            created: T = sdk_module.create(**desired.__dict__)
+            assert created
+            assert created.id
+
+        total_changes.append(
+            ResultClass(desired=desired, actual=None, action="new", changes=None, created=created))
     else:
         for actual in actual_objects:
             actual_dict = actual.as_dict()
@@ -34,10 +54,11 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
             ]
 
             total_changes.append(
-                DiffClass(desired=desired,
-                          actual=actual,
-                          action="change" if operations else "no change",
-                          changes=operations))
+                ResultClass(desired=desired,
+                            actual=actual,
+                            action="change" if operations else "no change",
+                            changes=operations,
+                            created=None))
 
             if operations:
                 if not dry_run:

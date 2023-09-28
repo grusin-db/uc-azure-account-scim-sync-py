@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, List
 
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
@@ -12,7 +12,7 @@ def delete_user_if_exists(client: AccountClient, email: str):
 
 
 def create_or_update_users(client: AccountClient, desired_users: Iterable[iam.User], dry_run=False):
-    total_differences: MergeResult[iam.User] = []
+    total_differences: List[MergeResult[iam.User]] = []
 
     for desired in desired_users:
         total_differences.extend(

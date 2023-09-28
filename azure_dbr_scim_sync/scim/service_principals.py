@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, List
 
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
@@ -15,7 +15,7 @@ def create_or_update_service_principals(client: AccountClient,
                                         desired_service_principals: Iterable[iam.ServicePrincipal],
                                         dry_run=False):
 
-    total_differences: MergeResult[iam.ServicePrincipal] = []
+    total_differences: List[MergeResult[iam.ServicePrincipal]] = []
 
     for desired in desired_service_principals:
         total_differences.extend(

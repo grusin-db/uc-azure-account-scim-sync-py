@@ -42,14 +42,16 @@ def test_create_or_update_users(client: AccountClient):
     ]
 
     # pre-delete
-    for u in users:
-        delete_user_if_exists(client, u.user_name)
+    for x in users:
+        delete_user_if_exists(client, x.user_name)
 
     # create users
     diff = create_or_update_users(client, users)
     assert len(diff) == 5
-    for u in diff:
-        u.action == "new"
+    for x in diff:
+        assert x.action == "new"
+        assert x.created
+        assert x.created.id
 
     # do actual changes
     users2 = [
@@ -67,8 +69,9 @@ def test_create_or_update_users(client: AccountClient):
     # next run should do no changes
     diff3 = create_or_update_users(client, users2)
     assert len(diff3) == 3
-    for u in diff3:
-        u.action == "new"
+    for x in diff3:
+        assert x.action == "no change"
+
 
 
 def test_create_or_update_groups(client: AccountClient):
@@ -84,14 +87,16 @@ def test_create_or_update_groups(client: AccountClient):
     # create groups
     diff = create_or_update_groups(client, groups)
     assert len(diff) == 5
-    for u in diff:
-        u.action == "new"
+    for x in diff:
+        assert x.action == "new"
+        assert x.created
+        assert x.created.id
 
     # next run should do no changes
     diff2 = create_or_update_groups(client, groups)
     assert len(diff2) == 5
-    for u in diff2:
-        u.action == "no change"
+    for x in diff2:
+        assert x.action == "no change"
 
 
 def test_create_or_update_service_principals(client: AccountClient):
@@ -108,14 +113,16 @@ def test_create_or_update_service_principals(client: AccountClient):
     # create service prinsipals
     diff = create_or_update_service_principals(client, spns)
     assert len(diff) == 5
-    for u in diff:
-        u.action == "new"
+    for x in diff:
+        assert x.action == "new"
+        assert x.created
+        assert x.created.id
 
     # next run should do no changes
     diff2 = create_or_update_service_principals(client, spns)
     assert len(diff2) == 5
-    for u in diff:
-        u.action == "no change"
+    for x in diff2:
+        assert x.action == "no change"
 
     # make some changes
     spns2 = [
@@ -126,5 +133,5 @@ def test_create_or_update_service_principals(client: AccountClient):
 
     diff3 = create_or_update_service_principals(client, spns2)
     assert len(diff3) == 5
-    for u in diff:
-        u.action == "change"
+    for x in diff3:
+        assert x.action == "change"

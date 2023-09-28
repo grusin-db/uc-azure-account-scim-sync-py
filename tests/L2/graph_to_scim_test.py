@@ -54,5 +54,14 @@ def test_graph_sync_object(graph_client: GraphAPIClient, account_client: Account
                                           [x.to_sdk_group() for x in stuff_to_sync.groups.values()])
     spn_diff = create_or_update_service_principals(
         account_client, [x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()])
-    
-    pass
+
+    for u in users_diff:
+        assert u.external_id
+        assert u.id
+        
+
+    # for to_sync_group in stuff_to_sync.groups.values():
+    #     tsg_members = to_sync_group.members
+
+
+    # graph members are index by "id"/"external_id", each having also mail/display_name/application_id
