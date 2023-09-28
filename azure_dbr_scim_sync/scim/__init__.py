@@ -16,7 +16,7 @@ class MergeResult(Generic[T]):
     actual: T
     created: T
     action: str
-    changes: Optional[List[iam.Patch]]
+    changes: List[iam.Patch]
 
     @property
     def external_id(self) -> str:
@@ -48,7 +48,7 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
             assert created.id
 
         total_changes.append(
-            ResultClass(desired=desired, actual=None, action="new", changes=None, created=created))
+            ResultClass(desired=desired, actual=None, action="new", changes=[], created=created))
     else:
         for actual in actual_objects:
             actual_dict = actual.as_dict()

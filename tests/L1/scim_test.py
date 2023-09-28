@@ -6,6 +6,12 @@ import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
+from typing import List
+
+from azure_dbr_scim_sync.scim import sync, ScimSyncObject
+
+import pytest
+
 from azure_dbr_scim_sync.scim import (create_or_update_groups,
                                       create_or_update_service_principals,
                                       create_or_update_users,
@@ -20,7 +26,7 @@ logging.getLogger('databricks.sdk').setLevel(logging.DEBUG)
 
 
 @pytest.fixture()
-def client():
+def account_client():
     account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
     assert account_id
     host = os.getenv("DATABRICKS_HOST")
@@ -29,11 +35,11 @@ def client():
     return AccountClient(host=host, account_id=account_id)
 
 
-def test_smoke(client: AccountClient):
-    len(client.metastores.list()) > 0
+def test_smoke(account_client: AccountClient):
+    len(account_client.metastores.list()) > 0
 
 
-def test_create_or_update_users(client: AccountClient):
+def test_create_or_update_users(account_client: AccountClient):
     users = [
         iam.User(user_name=f"test{idx}@example.com",
                  display_name=f"tester {idx}",
@@ -43,10 +49,10 @@ def test_create_or_update_users(client: AccountClient):
 
     # pre-delete
     for x in users:
-        delete_user_if_exists(client, x.user_name)
+        delete_user_if_exists(account_client, x.user_name)
 
     # create users
-    diff = create_or_update_users(client, users)
+    diff = create_or_update_users(account_client, users)
     assert len(diff) == 5
     for x in diff:
         assert x.action == "new"
@@ -61,19 +67,19 @@ def test_create_or_update_users(client: AccountClient):
                  active=True) for idx in range(0, 3)
     ]
 
-    diff2 = create_or_update_users(client, users2)
+    diff2 = create_or_update_users(account_client, users2)
     assert len(diff2) == 3
     assert diff2[0].action == "change"
     assert diff2[0].changes[0].as_dict() == {'op': 'replace', 'path': 'displayName', 'value': 'tester 0 v2'}
 
     # next run should do no changes
-    diff3 = create_or_update_users(client, users2)
+    diff3 = create_or_update_users(account_client, users2)
     assert len(diff3) == 3
     for x in diff3:
         assert x.action == "no change"
 
 
-def test_create_or_update_groups(client: AccountClient):
+def test_create_or_update_groups(account_client: AccountClient):
     groups = [
         iam.Group(display_name=f"test-example-grp-{idx}", external_id=f"abc-grp-{idx}")
         for idx in range(0, 5)
@@ -81,10 +87,10 @@ def test_create_or_update_groups(client: AccountClient):
 
     # pre-delete
     for g in groups:
-        delete_group_if_exists(client, g.display_name)
+        delete_group_if_exists(account_client, g.display_name)
 
     # create groups
-    diff = create_or_update_groups(client, groups)
+    diff = create_or_update_groups(account_client, groups)
     assert len(diff) == 5
     for x in diff:
         assert x.action == "new"
@@ -92,13 +98,13 @@ def test_create_or_update_groups(client: AccountClient):
         assert x.created.id
 
     # next run should do no changes
-    diff2 = create_or_update_groups(client, groups)
+    diff2 = create_or_update_groups(account_client, groups)
     assert len(diff2) == 5
     for x in diff2:
         assert x.action == "no change"
 
 
-def test_create_or_update_service_principals(client: AccountClient):
+def test_create_or_update_service_principals(account_client: AccountClient):
     spns = [
         iam.ServicePrincipal(application_id=f"00000000-1337-1337-1337-00000000000{idx}",
                              display_name=f"test-example-spn-{idx}",
@@ -107,10 +113,10 @@ def test_create_or_update_service_principals(client: AccountClient):
 
     # pre-delete
     for s in spns:
-        delete_service_principal_if_exists(client, s.application_id)
+        delete_service_principal_if_exists(account_client, s.application_id)
 
     # create service prinsipals
-    diff = create_or_update_service_principals(client, spns)
+    diff = create_or_update_service_principals(account_client, spns)
     assert len(diff) == 5
     for x in diff:
         assert x.action == "new"
@@ -118,7 +124,7 @@ def test_create_or_update_service_principals(client: AccountClient):
         assert x.created.id
 
     # next run should do no changes
-    diff2 = create_or_update_service_principals(client, spns)
+    diff2 = create_or_update_service_principals(account_client, spns)
     assert len(diff2) == 5
     for x in diff2:
         assert x.action == "no change"
@@ -130,11 +136,96 @@ def test_create_or_update_service_principals(client: AccountClient):
                              external_id=f"abc-spn-{idx}") for idx in range(0, 5)
     ]
 
-    diff3 = create_or_update_service_principals(client, spns2)
+    diff3 = create_or_update_service_principals(account_client, spns2)
     assert len(diff3) == 5
     for x in diff3:
         assert x.action == "change"
 
 
-def test_group_membership(client: AccountClient):
-    pass
+def test_group_membership(account_client: AccountClient):
+    def _verify_group_members(groups: List[iam.Group], sync_results: ScimSyncObject):
+        for idx, g in enumerate(groups):
+            id = sync_results.groups[idx].id
+            data = account_client.groups.get(id)
+
+            assert set(
+                m.display
+                for m in data.members
+            ) == set(
+                m.display
+                for m in g.members
+            )
+
+
+    users = [
+        iam.User(user_name=f"test-end2end-{idx}@example.com",
+                 display_name=f"tester {idx} grp-end2end",
+                 external_id=f"test-end2end-{idx}",
+                 active=True) for idx in range(0, 5)
+    ]
+
+    groups = [
+        iam.Group(
+            display_name=f"test-end2end-grp-{idx}",
+            external_id=f"test-xyz-grp-end2end-{idx}",
+            members=[
+                iam.ComplexValue(
+                    display=u.display_name,
+                    value=u.external_id
+                )
+                for uidx, u in enumerate(users)
+                if uidx <= idx
+            ]
+            )
+        for idx in range(0, 5)
+    ]
+
+    # pre-delete
+    for u in users:
+        delete_user_if_exists(account_client, u.user_name)
+
+    for g in groups:
+        delete_group_if_exists(account_client, g.display_name) 
+
+    # run twice, to ensure nothing changes 2nd time
+    for _ in ["first", "2nd"]:
+        # sync
+        sync_results = sync(
+            account_client=account_client,
+            users=users,
+            groups=groups,
+            service_principals=[])
+
+        # verify if groups mach the results
+        _verify_group_members(groups, sync_results)
+
+    # move the groups around
+    groups = [
+        iam.Group(
+            display_name=f"test-end2end-grp-{idx}",
+            external_id=f"test-xyz-grp-end2end-{idx}",
+            members=[
+                iam.ComplexValue(
+                    display=u.display_name,
+                    value=u.external_id
+                )
+                for uidx, u in enumerate(users)
+                if uidx >= idx
+            ]
+            )
+        for idx in range(0, 5)
+    ]
+
+    # should fail on group members, because we did not run processing yet :P
+    with pytest.raises(AssertionError):
+        _verify_group_members(groups, sync_results)
+
+    sync_results = sync(
+        account_client=account_client,
+        users=users,
+        groups=groups,
+        service_principals=[]
+    )
+
+    _verify_group_members(groups, sync_results)
+
