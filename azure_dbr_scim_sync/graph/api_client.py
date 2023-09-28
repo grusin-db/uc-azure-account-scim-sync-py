@@ -10,7 +10,6 @@ from urllib3.util.retry import Retry
 class GraphBase(BaseModel):
     id: str
     display_name: str = Field(validation_alias=AliasChoices('displayName'))
-    dbr_id: Optional[str] = None
 
 
 class GraphUser(GraphBase):
@@ -21,8 +20,7 @@ class GraphUser(GraphBase):
         return iam.User(user_name=self.mail,
                         display_name=self.display_name,
                         active=self.active,
-                        external_id=self.id,
-                        id=self.dbr_id)
+                        external_id=self.id)
 
 
 class GraphServicePrincipal(GraphBase):
@@ -33,15 +31,17 @@ class GraphServicePrincipal(GraphBase):
         return iam.ServicePrincipal(application_id=self.application_id,
                                     display_name=self.display_name,
                                     active=self.active,
-                                    external_id=self.id,
-                                    id=self.dbr_id)
+                                    external_id=self.id)
 
 
 class GraphGroup(GraphBase):
     members: Optional[Dict[str, GraphBase]] = Field(default_factory=lambda: {})
 
     def to_sdk_group(self):
-        return iam.Group(display_name=self.display_name, external_id=self.id, id=self.dbr_id)
+        return iam.Group(
+            display_name=self.display_name,
+            external_id=self.id,
+            members=[iam.ComplexValue(display=x.display_name, value=x.id) for x in self.members.values()])
 
 
 class GraphSyncObject(BaseModel):

@@ -73,7 +73,6 @@ def test_create_or_update_users(client: AccountClient):
         assert x.action == "no change"
 
 
-
 def test_create_or_update_groups(client: AccountClient):
     groups = [
         iam.Group(display_name=f"test-example-grp-{idx}", external_id=f"abc-grp-{idx}")
@@ -135,3 +134,7 @@ def test_create_or_update_service_principals(client: AccountClient):
     assert len(diff3) == 5
     for x in diff3:
         assert x.action == "change"
+
+
+def test_group_membership(client: AccountClient):
+    pass

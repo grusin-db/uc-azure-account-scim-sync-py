@@ -6,9 +6,7 @@ import pytest
 from databricks.sdk import AccountClient
 
 from azure_dbr_scim_sync.graph import GraphAPIClient
-from azure_dbr_scim_sync.scim import (create_or_update_groups,
-                                      create_or_update_service_principals,
-                                      create_or_update_users)
+from azure_dbr_scim_sync.scim import sync
 
 logging.basicConfig(stream=sys.stderr,
                     level=(logging.DEBUG),
@@ -44,24 +42,14 @@ def account_client():
 
 def test_graph_sync_object(graph_client: GraphAPIClient, account_client: AccountClient):
     stuff_to_sync = graph_client.get_objects_for_sync([
-        'team02-admin', 'team01-admin', 'team02-eng', 'team01-eng', 'uc-metastore-playground-admin',
+        'uc-metastore-playground-admin', 'team02-admin', 'team01-admin', 'team02-eng', 'team01-eng',
         'uc-account-admin'
     ])
 
-    users_diff = create_or_update_users(account_client,
-                                        [x.to_sdk_user() for x in stuff_to_sync.users.values()])
-    groups_diff = create_or_update_groups(account_client,
-                                          [x.to_sdk_group() for x in stuff_to_sync.groups.values()])
-    spn_diff = create_or_update_service_principals(
-        account_client, [x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()])
+    sync_results = sync(
+        account_client=account_client,
+        users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
+        groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
+        service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()])
 
-    for u in users_diff:
-        assert u.external_id
-        assert u.id
-        
-
-    # for to_sync_group in stuff_to_sync.groups.values():
-    #     tsg_members = to_sync_group.members
-
-
-    # graph members are index by "id"/"external_id", each having also mail/display_name/application_id
+    print(sync_results)
