@@ -1,16 +1,22 @@
 import json
 import logging
 import sys
-import coloredlogs
 
 import click
+import coloredlogs
 
 from azure_dbr_scim_sync.graph import GraphAPIClient
-from azure_dbr_scim_sync.scim import get_account_client, sync as scim_sync
+from azure_dbr_scim_sync.scim import get_account_client
+from azure_dbr_scim_sync.scim import sync as scim_sync
+
 
 @click.command()
 @click.option('--groups-json-file', help="list of AAD groups to sync (json formatted)", required=True)
-@click.option('--verbose', default=False, is_flag=True, help="verbose information about changes", show_default=True)
+@click.option('--verbose',
+              default=False,
+              is_flag=True,
+              help="verbose information about changes",
+              show_default=True)
 @click.option('--debug', default=False, is_flag=True, help="show API call", show_default=True)
 @click.option('--dry-run',
               default=False,
@@ -19,8 +25,8 @@ from azure_dbr_scim_sync.scim import get_account_client, sync as scim_sync
               show_default=True)
 def sync(groups_json_file, verbose, debug, dry_run):
     logging.basicConfig(stream=sys.stderr,
-                    level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
+                        level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
     logger = logging.getLogger('sync')
 
     # colored logs sets all loggers to this level
@@ -29,7 +35,6 @@ def sync(groups_json_file, verbose, debug, dry_run):
 
     if verbose:
         logger.setLevel(logging.DEBUG)
-
 
     graph_client = GraphAPIClient()
     account_client = get_account_client()
@@ -47,8 +52,9 @@ def sync(groups_json_file, verbose, debug, dry_run):
         groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
         service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
         dry_run=dry_run)
-    
+
     logger.info("Sync finished!")
+
 
 if __name__ == '__main__':
     sync()

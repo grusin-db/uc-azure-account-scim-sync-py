@@ -1,4 +1,5 @@
 import itertools
+import logging
 import os
 from copy import deepcopy
 from dataclasses import dataclass
@@ -7,13 +8,13 @@ from typing import Generic, Iterable, List, Optional, TypeVar
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 from pydantic import BaseModel, Field
-import logging
+
+from ..version import __version__
 
 T = TypeVar("T")
 
-import logging
+logger = logging.getLogger('sync.scim')
 
-logger = logging.getLogger('sync.scim.users')
 
 @dataclass
 class MergeResult(Generic[T]):
@@ -34,16 +35,21 @@ class MergeResult(Generic[T]):
     @property
     def id(self) -> str:
         return self.effective.id
-    
+
     @property
     def effecitve_change_count(self):
         if self.action == "new":
             return 1
-        
+
         return len(self.changes)
 
-def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
-                              dry_run: bool, logger=None) -> List[T]:
+
+def _generic_create_or_update(desired: T,
+                              actual_objects: Iterable[T],
+                              compare_fields: List[str],
+                              sdk_module,
+                              dry_run: bool,
+                              logger=None) -> List[T]:
     logger = logger or logging.getLogger(f"sync.scim")
     total_changes = []
     ResultClass = MergeResult[T]
@@ -110,18 +116,19 @@ class ScimSyncObject:
     @property
     def users_effecitve_change_count(self):
         return sum(x.effecitve_change_count for x in self.users)
-    
+
     @property
     def groups_effecitve_change_count(self):
         return sum(x.effecitve_change_count for x in self.groups)
-    
+
     @property
     def service_principals_effecitve_change_count(self):
         return sum(x.effecitve_change_count for x in self.service_principals)
-    
+
     @property
     def effecitve_change_count(self):
         return self.users_effecitve_change_count + self.groups_effecitve_change_count + self.service_principals_effecitve_change_count
+
 
 def sync(account_client: AccountClient,
          users: Iterable[iam.User],
@@ -134,15 +141,19 @@ def sync(account_client: AccountClient,
                             service_principals=create_or_update_service_principals(
                                 account_client, service_principals, dry_run),
                             groups=create_or_update_groups(account_client, groups, dry_run))
-    
-    logger.info(f"Finished creating and updating, changes counts: users={result.users_effecitve_change_count}, groups={result.groups_effecitve_change_count}, service_principals={result.service_principals_effecitve_change_count}")
+
+    logger.info(
+        f"Finished creating and updating, changes counts: users={result.users_effecitve_change_count}, groups={result.groups_effecitve_change_count}, service_principals={result.service_principals_effecitve_change_count}"
+    )
     if dry_run:
         if result.effecitve_change_count != 0:
-            logger.warning(f"There are pending changes, dry run cannot continue without first applying these changes. run with --todo-flag-here to apply above changes")
+            logger.warning(
+                f"There are pending changes, dry run cannot continue without first applying these changes. run with --todo-flag-here to apply above changes"
+            )
             return result
         else:
             logger.info(f"There are no pending changes, dry run will continue...")
-    
+
     logger.info("Starting synchronization of group members...")
 
     # xref both ways
@@ -207,7 +218,8 @@ def sync(account_client: AccountClient,
             ])
 
         if patch_operations:
-            logger.info(f"group {group_merge_result.desired.display_name} members changes: {patch_operations}")
+            logger.info(
+                f"group {group_merge_result.desired.display_name} members changes: {patch_operations}")
             group_merge_result.changes.extend(patch_operations)
 
             if not dry_run:
@@ -237,8 +249,13 @@ def get_account_client():
                              account_id=account_id,
                              client_id=client_id,
                              client_secret=client_secret,
-                             auth_type="azure")
+                             auth_type="azure",
+                             product="azure_dbr_scim_sync",
+                             product_version=__version__)
     else:
         # allow AccountClient do it's own auth method
         logger.info("Using databricks.sdk auth probing")
-        return AccountClient(host=host, account_id=account_id)
+        return AccountClient(host=host,
+                             account_id=account_id,
+                             product="azure_dbr_scim_sync",
+                             product_version=__version__)

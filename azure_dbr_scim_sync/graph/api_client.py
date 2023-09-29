@@ -10,6 +10,7 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger('sync.graph')
 
+
 class GraphBase(BaseModel):
     id: str
     display_name: str = Field(validation_alias=AliasChoices('displayName'))
@@ -160,7 +161,7 @@ class GraphAPIClient:
             id = d['id']
             if id not in sync_data.service_principals:
                 try:
-                    obj =  GraphServicePrincipal.model_validate(d)
+                    obj = GraphServicePrincipal.model_validate(d)
                     sync_data.service_principals[id] = obj
                     logger.debug(f"Downloaded GraphServicePrincipal: {obj}")
                 except Exception as e:
@@ -193,7 +194,7 @@ class GraphAPIClient:
 
             for m in group_members:
                 # remove any None values, without that aliases dont work well
-                m = { k: v for k,v in m.items() if v is not None }
+                m = {k: v for k, v in m.items() if v is not None}
 
                 if m['@odata.type'] == '#microsoft.graph.user':
                     r = _register_user(m)
