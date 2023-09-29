@@ -52,3 +52,12 @@ Options:
 - enable incremental graph api change capture, so that only group members and users who changed since last ran would be synced
 - enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
 - enable ability to run directly from databricks workflows, with simple installer
+
+## Local development
+
+- run `make dev`
+- set env variables
+- run `make test`
+- run `vim` and make code changes
+- run `make fmt && make lint && make test` works again :)
+- `git commit && git push`
