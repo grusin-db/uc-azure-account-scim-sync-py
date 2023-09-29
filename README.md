@@ -56,8 +56,19 @@ Options:
 ## Local development
 
 - run `make dev`
-- set env variables
+- set env variables `export ARM_...=123`, or if you are using VS Code tests ASLO create `.envs` file:
+
+```sh
+ARM_TENANT_ID=...
+GRAPH_ARM_CLIENT_ID=...
+GRAPH_ARM_CLIENT_SECRET=...
+DATABRICKS_ACCOUNT_ID=...
+DATABRICKS_HOST="https://accounts.azuredatabricks.net/"
+```
+
 - run `make test`
 - run `vim` and make code changes
 - run `make fmt && make lint && make test` works again :)
 - `git commit && git push`
+
+When working with VSCode, create `.envs` file and put there all variables
