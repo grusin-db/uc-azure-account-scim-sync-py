@@ -1,11 +1,15 @@
 from typing import Dict, List, Optional
 
 import requests
+import os
 from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+import logging
+
+LOG = logging.getLogger('graph')
 
 class GraphBase(BaseModel):
     id: str
@@ -13,7 +17,7 @@ class GraphBase(BaseModel):
 
 
 class GraphUser(GraphBase):
-    mail: str = Field(validation_alias=AliasChoices('mail'))
+    mail: str = Field(validation_alias=AliasChoices('mail', 'mailNickname'))
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
 
     def to_sdk_user(self):
@@ -53,9 +57,9 @@ class GraphSyncObject(BaseModel):
 
 class GraphAPIClient:
 
-    def __init__(self, tenant_id: str, spn_id: str, spn_key: str):
-        self._tenant_id = tenant_id
-
+    def __init__(self, tenant_id: str=None, spn_id: str=None, spn_key: str=None):
+        self._tenant_id = None
+        
         retry_strategy = Retry(
             total=6,
             backoff_factor=1,
@@ -72,7 +76,26 @@ class GraphAPIClient:
                                    pool_block=True)
         self._session.mount("https://", http_adapter)
 
-        self._token = self._get_access_token(tenant_id, spn_id, spn_key)
+        self._token = None
+        self._header = None
+        self._base_url = None
+
+        self._authenticate()
+
+    def _authenticate(self):
+        tenant_id = self._tenant_id or os.getenv("GRAPH_ARM_TENANT_ID") or os.getenv("ARM_TENANT_ID")
+        if not tenant_id:
+            raise ValueError("unknown tenant_id, set GRAPH_ARM_TENANT_ID or ARM_TENANT_ID environment variables!")
+        
+        client_id = self._tenant_id or os.getenv("GRAPH_ARM_CLIENT_ID") or os.getenv("ARM_CLIENT_ID")
+        if not tenant_id:
+            raise ValueError("unknown client_id, set GRAPH_ARM_CLIENT_ID or ARM_CLIENT_ID environment variables!")
+
+        client_scret = self._tenant_id or os.getenv("GRAPH_ARM_CLIENT_SECRET") or os.getenv("ARM_CLIENT_SECRET")
+        if not client_id:
+            raise ValueError("unknown client_id, set GRAPH_ARM_CLIENT_SECRET or ARM_CLIENT_SECRET environment variables!")
+
+        self._token = self._get_access_token(tenant_id, client_id, client_scret)
         self._header = {"Authorization": f"Bearer {self._token}"}
         self._base_url = "https://graph.microsoft.com/"
 
@@ -104,7 +127,7 @@ class GraphAPIClient:
 
         return None
 
-    def get_group_members(self, group_id: str, select="id,displayName,mail,appId,accountEnabled") -> dict:
+    def get_group_members(self, group_id: str, select="id,displayName,mail,mailNickname,appId,accountEnabled") -> dict:
         res = self._session.get(f"{self._base_url}/beta/groups/{group_id}/members?$select={select}",
                                 headers=self._header)
 

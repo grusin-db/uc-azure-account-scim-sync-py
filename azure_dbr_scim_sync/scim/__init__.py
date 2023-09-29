@@ -1,4 +1,5 @@
 import itertools
+import os
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Generic, Iterable, List, Optional, TypeVar
@@ -177,3 +178,22 @@ def sync(account_client: AccountClient,
 
     print("dupa")
     return result
+
+
+def get_account_client():
+    account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
+    if not account_id:
+        raise ValueError("unknown account_id, set DATABRICKS_ACCOUNT_ID environment variable!")
+    
+    host = os.getenv("DATABRICKS_HOST")
+    if not host:
+        raise ValueError("unknown host, set DATABRICKS_HOST environment variable!")
+    
+    client_id = os.getenv('ARM_CLIENT_ID') or os.getenv('DATABRICKS_ARM_CLIENT_ID') 
+    client_secret = os.getenv('ARM_CLIENT_SECRET') or os.getenv('DATABRICKS_ARM_CLIENT_SECRET')
+
+    if client_id and client_secret:
+        return AccountClient(host=host, account_id=account_id, client_id=client_id, client_secret=client_secret, auth_type="azure")
+    else:
+        # allow AccountClient do it's own auth method
+        return AccountClient(host=host, account_id=account_id)

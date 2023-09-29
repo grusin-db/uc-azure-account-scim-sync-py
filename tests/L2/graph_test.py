@@ -15,34 +15,25 @@ logger = logging.getLogger('sync')
 
 
 @pytest.fixture()
-def client():
-    tenant_id = os.getenv('ARM_TENANT_ID')
-    assert tenant_id
-
-    spn_id = os.getenv('ARM_CLIENT_ID')
-    assert spn_id
-
-    spn_key = os.getenv('ARM_CLIENT_SECRET')
-    assert spn_key
-
-    return GraphAPIClient(tenant_id=tenant_id, spn_id=spn_id, spn_key=spn_key)
+def graph_client():
+    return GraphAPIClient()
 
 
-def test_get_group_members(client: GraphAPIClient):
+def test_get_group_members(graph_client: GraphAPIClient):
     group_name = 'team02-admin'
-    group_info = client.get_group_by_name(group_name)
+    group_info = graph_client.get_group_by_name(group_name)
 
     assert group_info
     assert isinstance(group_info, dict)
 
     logging.info(f"group: {group_name}: {json.dumps(group_info, indent=4)}")
 
-    group_members = client.get_group_members(group_info['id'])
+    group_members = graph_client.get_group_members(group_info['id'])
     assert group_members
     assert isinstance(group_members, list)
     logging.info(f"members: {json.dumps(group_members, indent=4)}")
 
 
-def test_non_existing_group(client: GraphAPIClient):
-    group_info = client.get_group_by_name("bla-bla-does-not-exist")
+def test_non_existing_group(graph_client: GraphAPIClient):
+    group_info = graph_client.get_group_by_name("bla-bla-does-not-exist")
     assert group_info is None

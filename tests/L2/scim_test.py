@@ -12,7 +12,7 @@ from azure_dbr_scim_sync.scim import (ScimSyncObject, create_or_update_groups,
                                       create_or_update_users,
                                       delete_group_if_exists,
                                       delete_service_principal_if_exists,
-                                      delete_user_if_exists, sync)
+                                      delete_user_if_exists, sync, get_account_client)
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -22,13 +22,7 @@ logging.getLogger('databricks.sdk').setLevel(logging.DEBUG)
 
 @pytest.fixture()
 def account_client():
-    account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
-    assert account_id
-    host = os.getenv("DATABRICKS_HOST")
-    assert host
-
-    return AccountClient(host=host, account_id=account_id)
-
+    return get_account_client()
 
 def test_smoke(account_client: AccountClient):
     len(account_client.metastores.list()) > 0
