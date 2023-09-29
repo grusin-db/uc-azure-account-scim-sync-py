@@ -43,9 +43,9 @@ Options:
 
 ## Limitations
 
-- AAD disabled users or service principals are not being disabled in databricks account
-- AAD deleted users or service principals are not being deleted from databricks account
-- Only full sync is supported
+- AAD disabled users or service principals are not being disabled in databricks account (needs change capture sync feature)
+- AAD deleted users or service principals are not being deleted from databricks account (needs change capture sync feature)
+- Only full sync is supported (needs change capture sync feature, obviously)
 
 ## Near time roadmap
 
