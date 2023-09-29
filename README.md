@@ -66,9 +66,9 @@ DATABRICKS_ACCOUNT_ID=...
 DATABRICKS_HOST="https://accounts.azuredatabricks.net/"
 ```
 
-- run `make test`
+- run `make install && make test` to install package locally and sure that tests pass
 - run `vim` and make code changes
-- run `make fmt && make lint && make test` works again :)
+- run `make fmt && make lint && make install && make test` works again :)
 - `git commit && git push`
 
 When working with VSCode, create `.envs` file and put there all variables
