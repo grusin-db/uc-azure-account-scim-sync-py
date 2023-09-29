@@ -7,9 +7,13 @@ from typing import Generic, Iterable, List, Optional, TypeVar
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 from pydantic import BaseModel, Field
+import logging
 
 T = TypeVar("T")
 
+import logging
+
+logger = logging.getLogger('sync.scim.users')
 
 @dataclass
 class MergeResult(Generic[T]):
@@ -30,10 +34,17 @@ class MergeResult(Generic[T]):
     @property
     def id(self) -> str:
         return self.effective.id
-
+    
+    @property
+    def effecitve_change_count(self):
+        if self.action == "new":
+            return 1
+        
+        return len(self.changes)
 
 def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_fields: List[str], sdk_module,
-                              dry_run: bool) -> List[T]:
+                              dry_run: bool, logger=None) -> List[T]:
+    logger = logger or logging.getLogger(f"sync.scim")
     total_changes = []
     ResultClass = MergeResult[T]
 
@@ -43,6 +54,7 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
     if not len(actual_objects):
         created = None
 
+        logger.info(f"[{dry_run=}] creating: {desired}")
         if not dry_run:
             created: T = sdk_module.create(**desired.__dict__)
             assert created
@@ -67,10 +79,13 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
                             created=None))
 
             if operations:
+                logger.info(f"[{dry_run=}] changing, current={actual}, changes: {total_changes}")
                 if not dry_run:
                     sdk_module.patch(actual.id,
                                      schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
                                      operations=operations)
+            else:
+                logger.debug(f"[{dry_run=}] no changes, current={actual}")
 
     return total_changes
 
@@ -92,6 +107,21 @@ class ScimSyncObject:
     groups: List[MergeResult[iam.Group]]
     service_principals: List[MergeResult[iam.ServicePrincipal]]
 
+    @property
+    def users_effecitve_change_count(self):
+        return sum(x.effecitve_change_count for x in self.users)
+    
+    @property
+    def groups_effecitve_change_count(self):
+        return sum(x.effecitve_change_count for x in self.groups)
+    
+    @property
+    def service_principals_effecitve_change_count(self):
+        return sum(x.effecitve_change_count for x in self.service_principals)
+    
+    @property
+    def effecitve_change_count(self):
+        return self.users_effecitve_change_count + self.groups_effecitve_change_count + self.service_principals_effecitve_change_count
 
 def sync(account_client: AccountClient,
          users: Iterable[iam.User],
@@ -99,13 +129,21 @@ def sync(account_client: AccountClient,
          service_principals: Iterable[iam.ServicePrincipal],
          dry_run=False):
 
+    logger.info("Starting creating or updating users, groups and service principals...")
     result = ScimSyncObject(users=create_or_update_users(account_client, users, dry_run),
                             service_principals=create_or_update_service_principals(
                                 account_client, service_principals, dry_run),
                             groups=create_or_update_groups(account_client, groups, dry_run))
-
+    
+    logger.info(f"Finished creating and updating, changes counts: users={result.users_effecitve_change_count}, groups={result.groups_effecitve_change_count}, service_principals={result.service_principals_effecitve_change_count}")
     if dry_run:
-        return result
+        if result.effecitve_change_count != 0:
+            logger.warning(f"There are pending changes, dry run cannot continue without first applying these changes. run with --todo-flag-here to apply above changes")
+            return result
+        else:
+            logger.info(f"There are no pending changes, dry run will continue...")
+    
+    logger.info("Starting synchronization of group members...")
 
     # xref both ways
     graph_to_dbr_ids = {
@@ -169,14 +207,15 @@ def sync(account_client: AccountClient,
             ])
 
         if patch_operations:
+            logger.info(f"group {group_merge_result.desired.display_name} members changes: {patch_operations}")
             group_merge_result.changes.extend(patch_operations)
 
-            account_client.groups.patch(
-                id=group_merge_result.id,
-                operations=patch_operations,
-                schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP])
+            if not dry_run:
+                account_client.groups.patch(
+                    id=group_merge_result.id,
+                    operations=patch_operations,
+                    schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP])
 
-    print("dupa")
     return result
 
 
@@ -184,16 +223,22 @@ def get_account_client():
     account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
     if not account_id:
         raise ValueError("unknown account_id, set DATABRICKS_ACCOUNT_ID environment variable!")
-    
+
     host = os.getenv("DATABRICKS_HOST")
     if not host:
         raise ValueError("unknown host, set DATABRICKS_HOST environment variable!")
-    
-    client_id = os.getenv('ARM_CLIENT_ID') or os.getenv('DATABRICKS_ARM_CLIENT_ID') 
+
+    client_id = os.getenv('ARM_CLIENT_ID') or os.getenv('DATABRICKS_ARM_CLIENT_ID')
     client_secret = os.getenv('ARM_CLIENT_SECRET') or os.getenv('DATABRICKS_ARM_CLIENT_SECRET')
 
     if client_id and client_secret:
-        return AccountClient(host=host, account_id=account_id, client_id=client_id, client_secret=client_secret, auth_type="azure")
+        logger.info("Using env variables auth")
+        return AccountClient(host=host,
+                             account_id=account_id,
+                             client_id=client_id,
+                             client_secret=client_secret,
+                             auth_type="azure")
     else:
         # allow AccountClient do it's own auth method
+        logger.info("Using databricks.sdk auth probing")
         return AccountClient(host=host, account_id=account_id)

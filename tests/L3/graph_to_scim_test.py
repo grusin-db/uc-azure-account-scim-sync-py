@@ -1,12 +1,11 @@
 import logging
-import os
 import sys
 
 import pytest
 from databricks.sdk import AccountClient
 
 from azure_dbr_scim_sync.graph import GraphAPIClient
-from azure_dbr_scim_sync.scim import sync, get_account_client
+from azure_dbr_scim_sync.scim import get_account_client, sync
 
 logging.basicConfig(stream=sys.stderr,
                     level=(logging.DEBUG),
@@ -19,9 +18,11 @@ logger = logging.getLogger('sync')
 def graph_client():
     return GraphAPIClient()
 
+
 @pytest.fixture()
 def account_client():
     return get_account_client()
+
 
 def test_graph_sync_object(graph_client: GraphAPIClient, account_client: AccountClient):
     stuff_to_sync = graph_client.get_objects_for_sync([

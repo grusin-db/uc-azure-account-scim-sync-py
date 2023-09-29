@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 from typing import List
 
@@ -12,7 +11,8 @@ from azure_dbr_scim_sync.scim import (ScimSyncObject, create_or_update_groups,
                                       create_or_update_users,
                                       delete_group_if_exists,
                                       delete_service_principal_if_exists,
-                                      delete_user_if_exists, sync, get_account_client)
+                                      delete_user_if_exists,
+                                      get_account_client, sync)
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -23,6 +23,7 @@ logging.getLogger('databricks.sdk').setLevel(logging.DEBUG)
 @pytest.fixture()
 def account_client():
     return get_account_client()
+
 
 def test_smoke(account_client: AccountClient):
     len(account_client.metastores.list()) > 0

@@ -11,12 +11,15 @@ with version_file.open('r') as f:
 setup(name="azure_dbr_scim_sync",
       version=version_data['__version__'],
       packages=find_packages(exclude=["tests", "*tests.*", "*tests"]),
-      python_requires=">=3.10",
-      install_requires=["pydantic==2.3.0", "pyyaml==6.0.1", "databricks-sdk==0.9.0", "requests", "click==8.1.7"],
+      python_requires=">=3.8",
+      install_requires=["pydantic==2.3.0", "pyyaml==6.0.1", "databricks-sdk==0.9.0", "requests", "click==8.1.7", "coloredlogs==15.0.1"],
       extras_require={"dev": ["databricks-connect==13.3.2", "pytest==7.4.2", "pytest-cov==4.1.0", "pytest-xdist", "pytest-mock",
                               "yapf", "pycodestyle", "autoflake", "isort", "wheel",
                               "pytest-approvaltests==0.2.4", "pylint==2.17.5", "pyright==1.1.327"],
                         },
+      entry_points = {
+        'console_scripts': [ 'azure_dbr_scim_sync=azure_dbr_scim_sync.cli.sync:sync' ]
+      },
       author="Grzegorz Rusin",
       author_email="grzegorz.rusin@databricks.com",
       description="Azure Databricks SCIM Sync",
@@ -35,3 +38,4 @@ setup(name="azure_dbr_scim_sync",
           "Programming Language :: Python :: 3.10",
           "Programming Language :: Python :: 3.11",
           "Operating System :: OS Independent"])
+
