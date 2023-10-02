@@ -24,8 +24,11 @@ lint:
 	autoflake --check-diff --quiet --recursive azure_dbr_scim_sync
 
 test:
-	pytest --cov=azure_dbr_scim_sync --cov-report html:coverage/html --cov-report xml:coverage/xml --junitxml=.junittest.xml tests/*
+	pytest --cov=azure_dbr_scim_sync --cov-report html:coverage/html --cov-report xml:coverage/xml --junitxml=.junittest.xml tests/L1* tests/L2* tests/L3*
 
+
+benchmark:
+	pytest --cov=azure_dbr_scim_sync tests/L4*
 
 coverage: test
 	open htmlcov/index.html
