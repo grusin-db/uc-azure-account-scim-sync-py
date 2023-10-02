@@ -5,7 +5,7 @@ from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 from joblib import Parallel, delayed
 
-from . import MergeResult, _generic_create_or_update
+from . import MergeResult, _generic_create_or_update, retry_on_429
 
 logger = logging.getLogger('sync.scim.service_principals')
 
@@ -13,17 +13,19 @@ logger = logging.getLogger('sync.scim.service_principals')
 def delete_service_principals_if_exists(client: AccountClient,
                                         service_principals_list: List[str],
                                         worker_threads: int = 3):
-    Parallel(backend='threading', verbose=100,
+    Parallel(backend='multiprocessing', verbose=100,
              n_jobs=worker_threads)(delayed(delete_service_principal_if_exists)(client, service_principal)
                                     for service_principal in service_principals_list)
 
 
+@retry_on_429(10, 1)
 def delete_service_principal_if_exists(client: AccountClient, application_id: str):
     for s in client.service_principals.list(filter=f"applicationId eq '{application_id}'"):
         logging.info(f"deleting service principal: {s}")
         client.service_principals.delete(s.id)
 
 
+@retry_on_429(10, 1)
 def create_or_update_service_principal(client: AccountClient,
                                        desired_service_principal: iam.ServicePrincipal,
                                        dry_run=False,
@@ -47,7 +49,7 @@ def create_or_update_service_principals(client: AccountClient,
         f"[{dry_run=}] Starting processing service principals: total={len(desired_service_principals)}")
 
     merge_results: List[MergeResult[iam.ServicePrincipal]] = Parallel(
-        backend='threading', verbose=100,
+        backend='multiprocessing', verbose=100,
         n_jobs=worker_threads)(delayed(create_or_update_service_principal)(client, desired, dry_run, logger)
                                for desired in desired_service_principals)
 

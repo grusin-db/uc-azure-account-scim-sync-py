@@ -1,11 +1,14 @@
+import functools
 import itertools
 import logging
 import os
+import time
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Generic, Iterable, List, Optional, TypeVar
 
 from databricks.sdk import AccountClient
+from databricks.sdk.core import DatabricksError
 from databricks.sdk.service import iam
 from pydantic import BaseModel, Field
 
@@ -98,7 +101,7 @@ from .groups import (create_or_update_groups, delete_group_if_exists,  # NOQA
                      delete_groups_if_exists)
 from .service_principals import create_or_update_service_principals  # NOQA
 from .service_principals import delete_service_principal_if_exists  # NOQA
-from .service_principals import delete_service_principals_if_exists # NOQA
+from .service_principals import delete_service_principals_if_exists  # NOQA
 from .users import (create_or_update_users, delete_user_if_exists,  # NOQA
                     delete_users_if_exists)
 
@@ -261,3 +264,34 @@ def get_account_client():
                              account_id=account_id,
                              product="azure_dbr_scim_sync",
                              product_version=__version__)
+
+def retry_on_429(retry_num, retry_sleep_sec):
+    """
+    retry help decorator.
+    :param retry_num: the retry num; retry sleep sec
+    :return: decorator
+    """
+
+    def decorator(func):
+        """decorator"""
+        # preserve information about the original function, or the func name will be "wrapper" not "func"
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            """wrapper"""
+            for attempt in range(retry_num):
+                try:
+                    return func(*args, **kwargs)
+                except DatabricksError as err:
+                    if err.error_code == "429":
+                        logging.error("Trying attempt %s of %s. (in %s seconds)", attempt + 1, retry_num,
+                                      retry_sleep_sec)
+                        time.sleep(retry_sleep_sec)
+                    else:
+                        raise err
+
+            logging.error("func %s retry failed", func)
+            raise Exception('Exceed max retry num: {} failed'.format(retry_num))
+
+        return wrapper
+
+    return decorator
