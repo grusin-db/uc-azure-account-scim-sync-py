@@ -94,13 +94,17 @@ def _generic_create_or_update(desired: T,
                            created=None)
 
 
-from .groups import create_or_update_groups, delete_group_if_exists  # NOQA
+from .groups import (create_or_update_groups, delete_group_if_exists,  # NOQA
+                     delete_groups_if_exists)
 from .service_principals import create_or_update_service_principals  # NOQA
 from .service_principals import delete_service_principal_if_exists  # NOQA
-from .users import create_or_update_users, delete_user_if_exists  # NOQA
+from .service_principals import delete_service_principals_if_exists # NOQA
+from .users import (create_or_update_users, delete_user_if_exists,  # NOQA
+                    delete_users_if_exists)
 
 __all__ = [
-    'create_or_update_users', 'create_or_update_groups', 'delete_user_if_exists', 'delete_group_if_exists',
+    'create_or_update_users', 'create_or_update_groups', 'delete_user_if_exists', 'delete_users_if_exists',
+    'delete_group_if_exists', 'delete_groups_if_exists', 'delete_service_principals_if_exists',
     'create_or_update_service_principals', 'delete_service_principal_if_exists', 'ScimSyncObject', 'sync'
 ]
 

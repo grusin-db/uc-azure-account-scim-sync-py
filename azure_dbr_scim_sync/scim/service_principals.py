@@ -10,6 +10,14 @@ from . import MergeResult, _generic_create_or_update
 logger = logging.getLogger('sync.scim.service_principals')
 
 
+def delete_service_principals_if_exists(client: AccountClient,
+                                        service_principals_list: List[str],
+                                        worker_threads: int = 3):
+    Parallel(backend='threading', verbose=100,
+             n_jobs=worker_threads)(delayed(delete_service_principal_if_exists)(client, service_principal)
+                                    for service_principal in service_principals_list)
+
+
 def delete_service_principal_if_exists(client: AccountClient, application_id: str):
     for s in client.service_principals.list(filter=f"applicationId eq '{application_id}'"):
         logging.info(f"deleting service principal: {s}")
@@ -33,7 +41,7 @@ def create_or_update_service_principal(client: AccountClient,
 def create_or_update_service_principals(client: AccountClient,
                                         desired_service_principals: Iterable[iam.ServicePrincipal],
                                         dry_run=False,
-                                        worker_threads: int = 1):
+                                        worker_threads: int = 3):
 
     logger.info(
         f"[{dry_run=}] Starting processing service principals: total={len(desired_service_principals)}")

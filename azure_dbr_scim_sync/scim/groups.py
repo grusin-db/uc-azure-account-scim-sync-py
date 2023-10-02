@@ -10,6 +10,12 @@ from . import MergeResult, _generic_create_or_update
 logger = logging.getLogger('sync.scim.users')
 
 
+def delete_groups_if_exists(client: AccountClient, group_name_list: List[str], worker_threads: int = 3):
+    Parallel(backend='threading', verbose=100,
+             n_jobs=worker_threads)(delayed(delete_group_if_exists)(client, group_name)
+                                    for group_name in group_name_list)
+
+
 def delete_group_if_exists(client: AccountClient, group_name: str):
     for g in client.groups.list(filter=f"displayName eq '{group_name}'"):
         logging.info(f"Deleting group: {g}")
@@ -33,7 +39,7 @@ def create_or_update_group(client: AccountClient,
 def create_or_update_groups(client: AccountClient,
                             desired_groups: Iterable[iam.Group],
                             dry_run=False,
-                            worker_threads: int = 1):
+                            worker_threads: int = 3):
     logger.info(f"[{dry_run=}] Starting processing groups, total={len(desired_groups)}")
 
     merge_results: List[MergeResult[iam.Group]] = Parallel(

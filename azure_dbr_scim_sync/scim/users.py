@@ -10,6 +10,12 @@ from . import MergeResult, _generic_create_or_update
 logger = logging.getLogger('sync.scim.users')
 
 
+def delete_users_if_exists(client: AccountClient, user_name_list: List[str], worker_threads: int = 3):
+    Parallel(backend='threading', verbose=100,
+             n_jobs=worker_threads)(delayed(delete_user_if_exists)(client, user_name)
+                                    for user_name in user_name_list)
+
+
 def delete_user_if_exists(client: AccountClient, email: str):
     for u in client.users.list(filter=f"userName eq '{email}'"):
         logging.info(f"deleting user: {u}")
@@ -29,7 +35,7 @@ def create_or_update_user(client: AccountClient, desired_user: iam.User, dry_run
 def create_or_update_users(client: AccountClient,
                            desired_users: Iterable[iam.User],
                            dry_run=False,
-                           worker_threads: int = 1):
+                           worker_threads: int = 3):
     logger.info(f"[{dry_run=}] Starting processing users: total={len(desired_users)}")
 
     merge_results: List[MergeResult[iam.Group]] = Parallel(

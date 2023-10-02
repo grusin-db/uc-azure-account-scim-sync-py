@@ -5,6 +5,7 @@ __pycache__/
 
 # project
 .envs
+.envs.sh
 .junittest*.xml
 coverage/
 

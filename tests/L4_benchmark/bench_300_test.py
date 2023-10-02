@@ -4,9 +4,7 @@ import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
-from azure_dbr_scim_sync.scim import (ScimSyncObject, delete_group_if_exists,
-                                      delete_user_if_exists,
-                                      get_account_client, sync)
+from azure_dbr_scim_sync.scim import ScimSyncObject, get_account_client, sync
 
 
 @pytest.fixture()
@@ -40,11 +38,8 @@ def test_300(account_client: AccountClient):
     ]
 
     # pre-delete
-    for u in users:
-        delete_user_if_exists(account_client, u.user_name)
-
-    for g in groups:
-        delete_group_if_exists(account_client, g.display_name)
+    #delete_users_if_exists(account_client, [u.user_name for u in users])
+    #delete_groups_if_exists(account_client, [g.display_name for g in groups])
 
     # sync
     sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
