@@ -153,7 +153,7 @@ class GraphAPIClient:
                     logger.debug(f"Downloaded GraphUser: {obj}")
                 except Exception as e:
                     logger.error(f"Invalid GraphUser: {d}", exc_info=e)
-                    return e
+                    raise e
 
             return sync_data.users[id]
 
@@ -166,7 +166,7 @@ class GraphAPIClient:
                     logger.debug(f"Downloaded GraphServicePrincipal: {obj}")
                 except Exception as e:
                     logger.error(f"Invalid GraphServicePrincipal: {d}", exc_info=e)
-                    return e
+                    raise e
 
             return sync_data.service_principals[id]
 
@@ -179,7 +179,7 @@ class GraphAPIClient:
                     logger.debug(f"Downloaded GraphGroup: {obj}")
                 except Exception as e:
                     logger.error(f"Invalid GraphGroup: {d}", exc_info=e)
-                    return e
+                    raise e
 
             return sync_data.groups[id]
 

@@ -6,8 +6,7 @@ import click
 import coloredlogs
 
 from azure_dbr_scim_sync.graph import GraphAPIClient
-from azure_dbr_scim_sync.scim import get_account_client
-from azure_dbr_scim_sync.scim import sync as scim_sync
+from azure_dbr_scim_sync.scim import get_account_client, sync
 
 
 @click.command()
@@ -23,7 +22,7 @@ from azure_dbr_scim_sync.scim import sync as scim_sync
               is_flag=True,
               help="dont make any changes, just display",
               show_default=True)
-def sync(groups_json_file, verbose, debug, dry_run):
+def sync_cli(groups_json_file, verbose, debug, dry_run):
     logging.basicConfig(stream=sys.stderr,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -46,7 +45,7 @@ def sync(groups_json_file, verbose, debug, dry_run):
     logger.info(f"Loaded {len(aad_groups)} groups from {groups_json_file}")
     stuff_to_sync = graph_client.get_objects_for_sync(aad_groups)
 
-    sync_results = scim_sync(
+    sync_results = sync(
         account_client=account_client,
         users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
         groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
@@ -57,4 +56,4 @@ def sync(groups_json_file, verbose, debug, dry_run):
 
 
 if __name__ == '__main__':
-    sync()
+    sync_cli()

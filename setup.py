@@ -18,7 +18,7 @@ setup(name="azure_dbr_scim_sync",
                               "pytest-approvaltests==0.2.4", "pylint==2.17.5", "pyright==1.1.327"],
                         },
       entry_points = {
-        'console_scripts': [ 'azure_dbr_scim_sync=azure_dbr_scim_sync.cli.sync:sync' ]
+        'console_scripts': [ 'azure_dbr_scim_sync=azure_dbr_scim_sync.cli:sync_cli' ]
       },
       author="Grzegorz Rusin",
       author_email="grzegorz.rusin@databricks.com",

@@ -377,8 +377,12 @@ def sync(account_client: AccountClient,
             member_dbr_id = dbr_member.value
             member_graph_id = dbr_to_graph_ids.get(member_dbr_id)
 
-            # not a known member, or not in graph group membership, mark as to remove
-            if (not member_graph_id) or (member_graph_id not in graph_group_member_ids):
+            # fail if it's not a known member
+            if not member_graph_id:
+                raise ValueError(f"failed to obtain AAD object id for {member_dbr_id}: {dbr_member}")
+
+            # if not in graph group membership, mark as to remove
+            if member_graph_id not in graph_group_member_ids:
                 to_delete_member_dbr_ids.add(member_dbr_id)
                 continue
 
