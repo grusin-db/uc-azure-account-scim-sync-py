@@ -4,7 +4,9 @@ import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
 
-from azure_dbr_scim_sync.scim import ScimSyncObject, get_account_client, sync, delete_users_if_exists, delete_groups_if_exists
+from azure_dbr_scim_sync.scim import (ScimSyncObject, delete_groups_if_exists,
+                                      delete_users_if_exists,
+                                      get_account_client, sync)
 
 
 @pytest.fixture()
