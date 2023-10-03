@@ -186,6 +186,10 @@ class GraphAPIClient:
         for idx, group_name in enumerate(group_names):
             logger.info(f"Downloading members of group: {group_name} ({idx+1}/{len(group_names)})")
             group_info = self.get_group_by_name(group_name)
+            if not group_info:
+                logger.warning(f"Group not found, skipping: {group_name}")
+                continue
+            
             group_members = self.get_group_members(group_info['id'])
 
             _register_group(group_info)
