@@ -10,7 +10,7 @@ uninstall:
 	pip uninstall azure_dbr_scim_sync
 
 fmt:
-	yapf -pri azure_dbr_scim_sync tests
+	yapf -pri azure_dbr_scim_sync tests setup.py
 	autoflake -ri azure_dbr_scim_sync tests
 	isort azure_dbr_scim_sync tests
 

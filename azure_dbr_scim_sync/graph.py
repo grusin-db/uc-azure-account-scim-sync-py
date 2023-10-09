@@ -189,7 +189,7 @@ class GraphAPIClient:
             if not group_info:
                 logger.warning(f"Group not found, skipping: {group_name}")
                 continue
-            
+
             group_members = self.get_group_members(group_info['id'])
 
             _register_group(group_info)
