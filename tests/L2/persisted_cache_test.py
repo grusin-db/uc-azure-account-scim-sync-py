@@ -1,9 +1,14 @@
+import os
+
+import pytest
+
 from azure_dbr_scim_sync.persisted_cache import Cache
 
 
 def test_local_persistance():
+    file_name = '.test_cache_local_persistance.json'
     # make clear cache
-    c = Cache(None, None, '.test_cache_local_persistance.json')
+    c = Cache(None, None, file_name)
     c.clear()
     assert c._data == {}
 
@@ -14,12 +19,16 @@ def test_local_persistance():
     c.flush()
 
     # load cache back again
-    c2 = Cache(None, None, '.test_cache_local_persistance.json')
+    c2 = Cache(None, None, file_name)
     assert c2._data == {"abc": 1, "abcd": 2}
+
+    c.flush()
+    os.remove(file_name)
 
 
 def test_misses():
-    c = Cache(None, None, '.test_cache_misses.json')
+    file_name = '.test_cache_misses.json'
+    c = Cache(None, None, file_name)
     c.clear()
 
     def _mapping_logic(idx):
@@ -45,3 +54,26 @@ def test_misses():
     assert c.get_and_validate(7, _validator) == None
     assert c.get_and_validate(7, None) == None
     assert c.get_and_validate(7, _validator) == None
+
+    c.flush()
+    os.remove(file_name)
+
+
+def test_auto_flush():
+    file_name = '.test_auto_flush.json'
+    c = Cache(None, None, file_name)
+    c.flush()
+    os.remove(file_name)
+
+    c = Cache(None, None, file_name)
+
+    with pytest.raises(FileNotFoundError):
+        os.remove(file_name)
+
+    for idx in range(0, 50):
+        c[idx] = idx * "x"
+
+    os.remove(file_name)
+
+    c.flush()
+    os.remove(file_name)
