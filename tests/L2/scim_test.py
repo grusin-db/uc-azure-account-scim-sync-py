@@ -2,6 +2,7 @@ import logging
 import sys
 from typing import List
 
+import time
 import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
@@ -138,6 +139,7 @@ def test_group_membership(account_client: AccountClient):
         for idx, g in enumerate(groups):
             id = sync_results.groups[idx].id
             data = account_client.groups.get(id)
+            data.members = data.members or []
 
             assert set(m.display for m in data.members) == set(m.display for m in g.members)
 
@@ -164,13 +166,15 @@ def test_group_membership(account_client: AccountClient):
     for g in groups:
         delete_group_if_exists(account_client, g.display_name)
 
-    # run twice, to ensure nothing changes 2nd time
-    for _ in ["first", "2nd"]:
-        # sync
-        sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
+    # api cache....
+    time.sleep(5)
 
-        # verify if groups mach the results
-        _verify_group_members(groups, sync_results)
+    # run twice, to ensure nothing changes 2nd time
+    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[], dry_run_security_principals=False, dry_run_members=True)
+    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[], dry_run_security_principals=False, dry_run_members=False)
+
+    # verify if groups mach the results
+    _verify_group_members(groups, sync_results)
 
     # move the groups around
     groups = [

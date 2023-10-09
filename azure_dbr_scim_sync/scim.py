@@ -122,7 +122,13 @@ def _generic_create_or_update(desired: T, actual_objects: Iterable[T], compare_f
 
         logger.info(f"[{dry_run=}] creating: {desired}")
         if not dry_run:
-            created: T = sdk_module.create(**desired.__dict__)
+            d = desired.__dict__
+
+            # dont create members, they might not be yet existing
+            if isinstance(desired, iam.Group):
+                d['members'] = []
+
+            created: T = sdk_module.create(**d)
             assert created
             assert created.id
 
@@ -324,21 +330,22 @@ def sync(account_client: AccountClient,
          users: Iterable[iam.User],
          groups: Iterable[iam.Group],
          service_principals: Iterable[iam.ServicePrincipal],
-         dry_run=False):
+         dry_run_security_principals=False,
+         dry_run_members=False):
 
     logger.info("Starting creating or updating users, groups and service principals...")
-    result = ScimSyncObject(users=create_or_update_users(account_client, users, dry_run),
+    result = ScimSyncObject(users=create_or_update_users(account_client, users, dry_run=dry_run_security_principals),
                             service_principals=create_or_update_service_principals(
-                                account_client, service_principals, dry_run),
-                            groups=create_or_update_groups(account_client, groups, dry_run))
+                                account_client, service_principals, dry_run=dry_run_security_principals),
+                            groups=create_or_update_groups(account_client, groups, dry_run=dry_run_security_principals))
 
     logger.info(
         f"Finished creating and updating, changes counts: users={result.users_effecitve_change_count}, groups={result.groups_effecitve_change_count}, service_principals={result.service_principals_effecitve_change_count}"
     )
-    if dry_run:
+    if dry_run_security_principals:
         if result.effecitve_change_count != 0:
             logger.warning(
-                f"There are pending changes, dry run cannot continue without first applying these changes. run with --todo-flag-here to apply above changes"
+                f"There are pending changes, dry run cannot continue without first applying these changes. Run with --dry-run-security-principals to apply above changes only, and then retry again with --dry-run-members"
             )
             return result
         else:
@@ -416,7 +423,7 @@ def sync(account_client: AccountClient,
                 f"group {group_merge_result.desired.display_name} members changes: {patch_operations}")
             group_merge_result.changes.extend(patch_operations)
 
-            if not dry_run:
+            if not dry_run_members:
                 account_client.groups.patch(
                     id=group_merge_result.id,
                     operations=patch_operations,
