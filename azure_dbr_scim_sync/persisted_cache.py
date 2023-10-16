@@ -1,6 +1,5 @@
 import json
 from threading import RLock
-from typing import Callable
 
 import fsspec
 
@@ -8,9 +7,10 @@ import fsspec
 class Cache:
 
     def __init__(self,
-                 storage_account: str,
-                 container: str,
                  path: str,
+                 *,
+                 storage_account: str = None,
+                 container: str = None,
                  tenat_id: str = None,
                  client_id: str = None,
                  client_secret: str = None):
@@ -34,40 +34,31 @@ class Cache:
         self._load()
 
     def _get_handle(self, mode):
-        if self._container is None and self._storage_account is None:
-            return fsspec.open(self._path, mode=mode, encoding="utf-8")
-        else:
-            return fsspec.open(self._path, **self._storage_options)
-
-    def get_and_validate(self, key, validator: Callable):
         with self._lock:
-            value = self._data.get(key)
-            if not value:
-                return None
+            if self._container is None and self._storage_account is None:
+                return fsspec.open(self._path, mode=mode, encoding="utf-8")
+            else:
+                return fsspec.open(self._path, **self._storage_options)
 
-        if validator is not None:
-            # FIXME: outside of lock to make sure we dont block other processes
-            # ... our calling implementation never quries the same keys concurrently
-            # ... to make it feature full it we should make lock per key
-            if validator(key, value):
-                return value
-        else:
-            return value
-
+    def invalidate(self, key):
         with self._lock:
-            self._data.pop(key, None)
-            self._change_counter = self._change_counter + 1
-            self._auto_flush_if_needed()
+            if key in self._data:
+                self._data.pop(key, None)
+                self._change_counter = self._change_counter + 1
+                self._auto_flush_if_needed()
 
-            return None
+    def get(self, key):
+        with self._lock:
+            return self._data.get(key)
+
+    def __getitem__(self, key):
+        return self.get(key)
 
     def __setitem__(self, key, value):
         with self._lock:
-            old_value = self._data.get(key)
-            if old_value != value:
-                self._data[key] = value
-                self._change_counter = self._change_counter + 1
-                self._auto_flush_if_needed()
+            self._data[key] = value
+            self._change_counter = self._change_counter + 1
+            self._auto_flush_if_needed()
 
     def _auto_flush_if_needed(self):
         with self._lock:

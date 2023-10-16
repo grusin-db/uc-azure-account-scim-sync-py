@@ -1,8 +1,8 @@
 import logging
 import sys
+import time
 from typing import List
 
-import time
 import pytest
 from databricks.sdk import AccountClient
 from databricks.sdk.service import iam
@@ -13,7 +13,8 @@ from azure_dbr_scim_sync.scim import (ScimSyncObject, create_or_update_groups,
                                       delete_group_if_exists,
                                       delete_service_principal_if_exists,
                                       delete_user_if_exists,
-                                      get_account_client, sync)
+                                      get_account_client, get_user_by_email,
+                                      sync)
 
 logging.basicConfig(stream=sys.stderr,
                     level=logging.INFO,
@@ -30,10 +31,14 @@ def test_smoke(account_client: AccountClient):
     len(account_client.metastores.list()) > 0
 
 
+def test_get_user_by_mail(account_client: AccountClient):
+    assert get_user_by_email(account_client, "does-not-exists@example.com") == None
+
+
 def test_create_or_update_users(account_client: AccountClient):
     users = [
-        iam.User(user_name=f"test{idx}@example.com",
-                 display_name=f"tester {idx}",
+        iam.User(user_name=f"testv3{idx}@example.com",
+                 display_name=f"testv3 {idx}",
                  external_id=f"abc-{idx}",
                  active=True) for idx in range(0, 5)
     ]
@@ -41,6 +46,8 @@ def test_create_or_update_users(account_client: AccountClient):
     # pre-delete
     for x in users:
         delete_user_if_exists(account_client, x.user_name)
+
+    time.sleep(5)
 
     # create users
     diff = create_or_update_users(account_client, users)
@@ -50,10 +57,12 @@ def test_create_or_update_users(account_client: AccountClient):
         assert x.created
         assert x.created.id
 
+    time.sleep(5)
+
     # do actual changes
     users2 = [
-        iam.User(user_name=f"test{idx}@example.com",
-                 display_name=f"tester {idx} v2",
+        iam.User(user_name=f"testv3{idx}@example.com",
+                 display_name=f"testv3 {idx} act2",
                  external_id=f"abc-{idx}",
                  active=True) for idx in range(0, 3)
     ]
@@ -61,7 +70,9 @@ def test_create_or_update_users(account_client: AccountClient):
     diff2 = create_or_update_users(account_client, users2)
     assert len(diff2) == 3
     assert diff2[0].action == "change"
-    assert diff2[0].changes[0].as_dict() == {'op': 'replace', 'path': 'displayName', 'value': 'tester 0 v2'}
+    assert diff2[0].changes[0].as_dict() == {'op': 'replace', 'path': 'displayName', 'value': 'testv3 0 act2'}
+
+    time.sleep(5)
 
     # next run should do no changes
     diff3 = create_or_update_users(account_client, users2)
@@ -80,6 +91,8 @@ def test_create_or_update_groups(account_client: AccountClient):
     for g in groups:
         delete_group_if_exists(account_client, g.display_name)
 
+    time.sleep(60)
+
     # create groups
     diff = create_or_update_groups(account_client, groups)
     assert len(diff) == 5
@@ -87,6 +100,8 @@ def test_create_or_update_groups(account_client: AccountClient):
         assert x.action == "new"
         assert x.created
         assert x.created.id
+
+    time.sleep(60)
 
     # next run should do no changes
     diff2 = create_or_update_groups(account_client, groups)
@@ -106,6 +121,8 @@ def test_create_or_update_service_principals(account_client: AccountClient):
     for s in spns:
         delete_service_principal_if_exists(account_client, s.application_id)
 
+    time.sleep(60)
+
     # create service prinsipals
     diff = create_or_update_service_principals(account_client, spns)
     assert len(diff) == 5
@@ -114,11 +131,15 @@ def test_create_or_update_service_principals(account_client: AccountClient):
         assert x.created
         assert x.created.id
 
+    time.sleep(60)
+
     # next run should do no changes
     diff2 = create_or_update_service_principals(account_client, spns)
     assert len(diff2) == 5
     for x in diff2:
         assert x.action == "no change"
+
+    time.sleep(60)
 
     # make some changes
     spns2 = [
@@ -167,14 +188,26 @@ def test_group_membership(account_client: AccountClient):
         delete_group_if_exists(account_client, g.display_name)
 
     # api cache....
-    time.sleep(5)
+    time.sleep(60)
 
     # run twice, to ensure nothing changes 2nd time
-    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[], dry_run_security_principals=False, dry_run_members=True)
-    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[], dry_run_security_principals=False, dry_run_members=False)
+    sync_results = sync(account_client=account_client,
+                        users=users,
+                        groups=groups,
+                        service_principals=[],
+                        dry_run_security_principals=False,
+                        dry_run_members=True)
+    sync_results = sync(account_client=account_client,
+                        users=users,
+                        groups=groups,
+                        service_principals=[],
+                        dry_run_security_principals=False,
+                        dry_run_members=False)
 
     # verify if groups mach the results
     _verify_group_members(groups, sync_results)
+
+    time.sleep(60)
 
     # move the groups around
     groups = [
