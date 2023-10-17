@@ -14,19 +14,22 @@ When doing synchronization no users, groups or service principals are ever delet
 
 ## How to run syncing
 
-### Configure enviroment variables for authentication
+### Configure authentication
 
-- set environment variables for graph api access:
-  - `GRAPH_ARM_TENANT_ID`, `GRAPH_ARM_CLIENT_ID` and `GRAPH_ARM_CLIENT_SECRET`
-  - the SPN will need to have Active Directory rights to read users, groups and service principals. Write rights are not required.
-- set environment variables for storage cache of graph/aad api ids to databricks ids
-  - `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_TENANT_ID`, `AZURE_STORAGE_CLIENT_ID`, `AZURE_STORAGE_CLIENT_SECRET`
-  - the defined SPN will need to have blob storage contributor rights on container.
-  - `AZURE_STORAGE_CONTAINER` must point to valid container, can be followed by subpaths, for example: `datalake/some_folder/` would store cache in container `datalake` in folder `some_folder`
-  - if not set, local file system will be used and cache data needs to be persisted by external tooling
-- set environment variables for databricks account access:
-  - `DATABRICKS_ARM_CLIENT_ID`, `DATABRICKS_ARM_CLIENT_SECRET`, `DATABRICKS_ACCOUNT_ID` and `DATABRICKS_HOST` (most likely it will be "https://accounts.azuredatabricks.net/")
-- in case both `GRAPH_ARM_...` and `DATABRICKS_ARM_...` credentials are the same, you can just use typical `ARM_...` env variables
+- use `az login` to get credentials for graph, databricks and storage
+- set environment variables for databricks account: `DATABRICKS_ACCOUNT_ID` and `DATABRICKS_HOST` (most likely it will be `https://accounts.azuredatabricks.net/` if you are on azure)
+- optinally, if you dont want to use `az login` credentials for specific resource, set enviroment variables, detail below:
+  - (optional) set environment variables for graph api access:
+    - `GRAPH_ARM_TENANT_ID`, `GRAPH_ARM_CLIENT_ID` and `GRAPH_ARM_CLIENT_SECRET`
+    - the SPN will need to have Active Directory rights to read users, groups and service principals. Write rights are not required.
+  - (optional) set environment variables for storage cache of graph/aad api ids to databricks ids
+    - `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_TENANT_ID`, `AZURE_STORAGE_CLIENT_ID`, `AZURE_STORAGE_CLIENT_SECRET`
+    - the defined SPN will need to have blob storage contributor rights on container.
+    - `AZURE_STORAGE_CONTAINER` must point to valid container, can be followed by subpaths, for example: `datalake/some_folder/` would store cache in container `datalake` in folder `some_folder`
+    - if not set, local file system will be used and cache data needs to be persisted by external tooling
+  - (optional) set environment variables for databricks account access:
+    - `DATABRICKS_ARM_CLIENT_ID`, `DATABRICKS_ARM_CLIENT_SECRET`,
+  - in case both `GRAPH_ARM_...` and `DATABRICKS_ARM_...` credentials are the same, you can just use typical `ARM_...` env variables
 
 - create JSON file containing the list of AAD groups you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`)
 -withut need of using specifc ones for graph and databricks account.
