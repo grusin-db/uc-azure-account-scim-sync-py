@@ -17,12 +17,18 @@ from azure_dbr_scim_sync.scim import get_account_client, sync
               help="verbose information about changes",
               show_default=True)
 @click.option('--debug', default=False, is_flag=True, help="show API call", show_default=True)
-@click.option('--dry-run',
+@click.option('--dry-run-security-principals',
               default=False,
               is_flag=True,
-              help="dont make any changes, just display",
+              help="dont make any changes to users, groups or service principals, just display changes",
               show_default=True)
-def sync_cli(groups_json_file, verbose, debug, dry_run):
+@click.option('--dry-run-members',
+              default=False,
+              is_flag=True,
+              help="dont make any changes to group members, just display changes",
+              show_default=True)
+@click.option('--worker-threads', default=10, show_default=True)
+def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads):
     logging.basicConfig(stream=sys.stderr,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -50,7 +56,9 @@ def sync_cli(groups_json_file, verbose, debug, dry_run):
         users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
         groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
         service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
-        dry_run=dry_run)
+        dry_run_security_principals=dry_run_security_principals,
+        dry_run_members=dry_run_members,
+        worker_threads=worker_threads)
 
     logger.info("Sync finished!")
 

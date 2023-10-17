@@ -28,6 +28,13 @@ def test_300(account_client: AccountClient):
                  active=True) for idx in range(0, 300)
     ]
 
+    spns = [
+        iam.ServicePrincipal(application_id=f"00000000-1337-1337-{idx}-000000000000",
+                             display_name=f"tester-spn-{idx} grp-end2end",
+                             external_id=f"grp-end2end-spn-{idx}") for idx in range(1000, 1300)
+    ]
+
+
     groups = [
         iam.Group(display_name=f"test-end2end-grp-{idx}",
                   external_id=f"test-xyz-grp-end2end-{idx}",
@@ -42,7 +49,7 @@ def test_300(account_client: AccountClient):
     # delete_groups_if_exists(account_client, [g.display_name for g in groups])
 
     # sync
-    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
+    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=spns)
 
     # verify if groups mach the results
     _verify_group_members(groups, sync_results)

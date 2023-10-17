@@ -288,12 +288,12 @@ def delete_users_if_exists(client: AccountClient, user_name_list: List[str], wor
                                              worker_threads)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def delete_user_if_exists(client: AccountClient, email: str):
     _delete_if_exists_by_human_name(_generic_type_map['user'], client.users, email)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def create_or_update_user(client: AccountClient, desired_user: iam.User, dry_run=False):
     return _generic_create_or_update(mapper=_generic_type_map['user'],
                                      desired=desired_user,
@@ -327,12 +327,12 @@ def delete_groups_if_exists(client: AccountClient, group_name_list: List[str], w
                                              worker_threads)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def delete_group_if_exists(client: AccountClient, group_name: str):
     _delete_if_exists_by_human_name(_generic_type_map['group'], client.groups, group_name)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def create_or_update_group(client: AccountClient,
                            desired_group: iam.Group,
                            dry_run=False) -> List[MergeResult[iam.Group]]:
@@ -369,12 +369,12 @@ def delete_service_principals_if_exists(client: AccountClient,
                                              application_id_list, worker_threads)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def delete_service_principal_if_exists(client: AccountClient, application_id: str):
     _delete_if_exists_by_human_name(_generic_type_map['spn'], client.service_principals, application_id)
 
 
-@retry_on_429(10, 1)
+@retry_on_429(100, 1)
 def create_or_update_service_principal(client: AccountClient,
                                        desired_service_principal: iam.ServicePrincipal,
                                        dry_run=False) -> List[MergeResult[iam.ServicePrincipal]]:
@@ -409,17 +409,23 @@ def sync(account_client: AccountClient,
          groups: Iterable[iam.Group],
          service_principals: Iterable[iam.ServicePrincipal],
          dry_run_security_principals=False,
-         dry_run_members=False):
+         dry_run_members=False,
+         worker_threads: int = 10):
 
     logger.info("Starting creating or updating users, groups and service principals...")
     result = ScimSyncObject(users=create_or_update_users(account_client,
                                                          users,
-                                                         dry_run=dry_run_security_principals),
+                                                         dry_run=dry_run_security_principals,
+                                                         worker_threads=worker_threads),
                             service_principals=create_or_update_service_principals(
-                                account_client, service_principals, dry_run=dry_run_security_principals),
+                                account_client,
+                                service_principals,
+                                dry_run=dry_run_security_principals,
+                                worker_threads=worker_threads),
                             groups=create_or_update_groups(account_client,
                                                            groups,
-                                                           dry_run=dry_run_security_principals))
+                                                           dry_run=dry_run_security_principals,
+                                                           worker_threads=worker_threads))
 
     logger.info(
         f"Finished creating and updating, changes counts: users={result.users_effecitve_change_count}, groups={result.groups_effecitve_change_count}, service_principals={result.service_principals_effecitve_change_count}"
