@@ -308,11 +308,13 @@ def create_or_update_users(client: AccountClient,
                            dry_run=False,
                            worker_threads: int = 3):
 
-    return _generic_create_or_update_parallel(client=client,
+    ret = _generic_create_or_update_parallel(client=client,
                                               desired_objs=desired_users,
                                               create_fun=create_or_update_user,
                                               dry_run=dry_run,
                                               worker_threads=worker_threads)
+    user_cache.flush()
+    return ret
 
 
 #
@@ -348,11 +350,14 @@ def create_or_update_groups(client: AccountClient,
                             desired_groups: Iterable[iam.Group],
                             dry_run=False,
                             worker_threads: int = 3):
-    return _generic_create_or_update_parallel(client=client,
+    ret = _generic_create_or_update_parallel(client=client,
                                               desired_objs=desired_groups,
                                               create_fun=create_or_update_group,
                                               dry_run=dry_run,
                                               worker_threads=worker_threads)
+    
+    group_cache.flush()
+    return ret
 
 
 #
@@ -392,11 +397,13 @@ def create_or_update_service_principals(client: AccountClient,
                                         dry_run=False,
                                         worker_threads: int = 3):
 
-    return _generic_create_or_update_parallel(client=client,
+    ret = _generic_create_or_update_parallel(client=client,
                                               desired_objs=desired_service_principals,
                                               create_fun=create_or_update_service_principal,
                                               dry_run=dry_run,
                                               worker_threads=worker_threads)
+    spn_cache.flush()
+    return ret
 
 
 #
