@@ -1,10 +1,11 @@
 import json
 import os
 from threading import RLock
-
+import logging
 import fsspec
 from adlfs import AzureBlobFileSystem
 
+logger = logging.getLogger('sync.cache')
 
 class Cache:
 
@@ -42,9 +43,11 @@ class Cache:
     def _get_handle(self, mode):
         with self._lock:
             if self._container is None and self._storage_account is None:
+                logger.debug(f"local cache(mode={mode}) access: {self._path}")
                 return fsspec.open(self._path, mode=mode, encoding="utf-8")
             else:
                 # register 'abfs:/' hanlder
+                logger.debug(f"abfs cache(mode={mode}) access: {self._path}")
                 AzureBlobFileSystem(**self._storage_options)
 
                 return fsspec.open(self._path, mode=mode, **self._storage_options)
