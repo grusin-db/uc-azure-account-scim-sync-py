@@ -440,11 +440,11 @@ def sync(account_client: AccountClient,
     if dry_run_security_principals:
         if result.effecitve_change_count != 0:
             logger.warning(
-                f"There are pending changes, dry run cannot continue without first applying these changes. Run with --dry-run-security-principals to apply above changes only, and then retry again with --dry-run-members"
+                "There are pending changes, dry run cannot continue without first applying these changes. Run with --dry-run-members to apply above changes and display changes to group membership without applying them."
             )
             return result
         else:
-            logger.info(f"There are no pending changes, dry run will continue...")
+            logger.info("There are no pending changes, dry run will continue...")
 
     logger.info("Starting synchronization of group members...")
 
@@ -458,6 +458,9 @@ def sync(account_client: AccountClient,
         u.id: u.external_id
         for u in itertools.chain(result.users, result.groups, result.service_principals)
     }
+
+    # FIXME: is there possibility that this would ever fail?
+    assert len(graph_to_dbr_ids) == len(dbr_to_graph_ids)
 
     # check which group members to add or remove
     for group_merge_result in result.groups:
