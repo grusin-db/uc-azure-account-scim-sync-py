@@ -17,6 +17,9 @@ logger = logging.getLogger('sync')
 def graph_client():
     return GraphAPIClient()
 
+def test_me(graph_client: GraphAPIClient):
+    assert graph_client.get_me() is not None
+
 
 def test_get_group_members(graph_client: GraphAPIClient):
     group_name = 'team02-admin'

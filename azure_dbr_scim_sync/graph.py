@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Dict, List, Optional
+from azure.identity import DefaultAzureCredential
 
 import requests
 from databricks.sdk.service import iam
@@ -83,39 +84,21 @@ class GraphAPIClient:
         self._authenticate()
 
     def _authenticate(self):
-        tenant_id = self._tenant_id or os.getenv("GRAPH_ARM_TENANT_ID") or os.getenv("ARM_TENANT_ID")
-        if not tenant_id:
-            raise ValueError(
-                "unknown tenant_id, set GRAPH_ARM_TENANT_ID or ARM_TENANT_ID environment variables!")
-
-        client_id = self._tenant_id or os.getenv("GRAPH_ARM_CLIENT_ID") or os.getenv("ARM_CLIENT_ID")
-        if not tenant_id:
-            raise ValueError(
-                "unknown client_id, set GRAPH_ARM_CLIENT_ID or ARM_CLIENT_ID environment variables!")
-
-        client_scret = self._tenant_id or os.getenv("GRAPH_ARM_CLIENT_SECRET") or os.getenv(
-            "ARM_CLIENT_SECRET")
-        if not client_id:
-            raise ValueError(
-                "unknown client_id, set GRAPH_ARM_CLIENT_SECRET or ARM_CLIENT_SECRET environment variables!")
-
-        self._token = self._get_access_token(tenant_id, client_id, client_scret)
-        self._header = {"Authorization": f"Bearer {self._token}"}
+        credential = DefaultAzureCredential()
+        self._token = credential.get_token('https://graph.microsoft.com/.default')
+        self._header = {"Authorization": f"Bearer {self._token[0]}"}
         self._base_url = "https://graph.microsoft.com/"
 
-    def _get_access_token(self, tenant_id, spn_id, spn_key):
-        post_data = {
-            'client_id': spn_id,
-            'scope': 'https://graph.microsoft.com/.default',
-            'client_secret': spn_key,
-            'grant_type': 'client_credentials'
-        }
-        initial_header = {'Content-type': 'application/x-www-form-urlencoded'}
-        res = self._session.post(f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
-                                 data=post_data,
-                                 headers=initial_header)
+        logger.debug(f"authenticated against graph as: {self.get_me()}")
+
+    def get_me(self):
+        res = self._session.get(
+            f"https://graph.microsoft.com/v1.0/me",
+            headers=self._header)
+
         res.raise_for_status()
-        return res.json().get("access_token")
+
+        return res.json()
 
     def get_group_by_name(self, name: str) -> dict:
         res = self._session.get(
