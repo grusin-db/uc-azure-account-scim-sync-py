@@ -2,6 +2,8 @@ import json
 from threading import RLock
 
 import fsspec
+import sys
+import os
 
 
 class Cache:
@@ -15,7 +17,7 @@ class Cache:
                  client_id: str = None,
                  client_secret: str = None):
         self._storage_account = storage_account
-        self._container = container
+        self._container = container or os.getenv('AZURE_STORAGE_CONTAINER')
         self._path = path
         self._storage_options = {'account_name': storage_account}
 

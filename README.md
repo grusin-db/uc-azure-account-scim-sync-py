@@ -14,13 +14,22 @@ When doing synchronization no users, groups or service principals are ever delet
 
 ## How to run syncing
 
-- create JSON file containing the list of AAD groups you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`)
+### Configure enviroment variables for authentication
+
 - set environment variables for graph api access:
   - `GRAPH_ARM_TENANT_ID`, `GRAPH_ARM_CLIENT_ID` and `GRAPH_ARM_CLIENT_SECRET`
   - the SPN will need to have Active Directory rights to read users, groups and service principals. Write rights are not required.
+- set environment variables for storage cache of graph/aad api ids to databricks ids
+  - `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_TENANT_ID`, `AZURE_STORAGE_CLIENT_ID`, `AZURE_STORAGE_CLIENT_SECRET`
+  - the defined SPN will need to have blob storage contributor rights on container.
+  - `AZURE_STORAGE_CONTAINER` must point to valid container, can be followed by subpaths, for example: `datalake/some_folder/` would store cache in container `datalake` in folder `some_folder`
+  - if not set, local file system will be used and cache data needs to be persisted by external tooling
 - set environment variables for databricks account access:
   - `DATABRICKS_ARM_CLIENT_ID`, `DATABRICKS_ARM_CLIENT_SECRET`, `DATABRICKS_ACCOUNT_ID` and `DATABRICKS_HOST` (most likely it will be "https://accounts.azuredatabricks.net/")
-- in case both `GRAPH_ARM_...` and `DATABRICKS_ARM_...` credentials are the same, you can just use typical `ARM_...` env variables, withut need of using specifc ones for graph and databricks account.
+- in case both `GRAPH_ARM_...` and `DATABRICKS_ARM_...` credentials are the same, you can just use typical `ARM_...` env variables
+
+- create JSON file containing the list of AAD groups you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`)
+-withut need of using specifc ones for graph and databricks account.
 - `pip install azure_dbr_scim_sync` to install this package, you should pin in version number to maintain stability of the interface
 - read the manual:
 
@@ -59,9 +68,20 @@ Options:
 - set env variables `export ARM_...=123`, or if you are using VS Code tests ASLO create `.envs` file:
 
 ```sh
+# common for everything
 ARM_TENANT_ID=...
+
+# graph api access creds
 GRAPH_ARM_CLIENT_ID=...
 GRAPH_ARM_CLIENT_SECRET=...
+
+# to keep cache of aad id <> dbr id mapping
+AZURE_STORAGE_TENANT_ID=...
+AZURE_STORAGE_CLIENT_ID=...
+AZURE_STORAGE_CLIENT_SECRET=...
+AZURE_STORAGE_ACCOUNT_NAME=...
+
+# databricks account details
 DATABRICKS_ACCOUNT_ID=...
 DATABRICKS_HOST="https://accounts.azuredatabricks.net/"
 ```
