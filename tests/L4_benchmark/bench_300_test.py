@@ -34,7 +34,6 @@ def test_300(account_client: AccountClient):
                              external_id=f"grp-end2end-spn-{idx}") for idx in range(1000, 1300)
     ]
 
-
     groups = [
         iam.Group(display_name=f"test-end2end-grp-{idx}",
                   external_id=f"test-xyz-grp-end2end-{idx}",

@@ -37,6 +37,8 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
     # colored logs sets all loggers to this level
     coloredlogs.install(level=logging.DEBUG)
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+        logging.DEBUG if debug else logging.WARNING)
 
     if verbose:
         logger.setLevel(logging.DEBUG)

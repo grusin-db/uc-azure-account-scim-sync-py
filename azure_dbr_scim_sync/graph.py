@@ -1,9 +1,8 @@
 import logging
-import os
 from typing import Dict, List, Optional
-from azure.identity import DefaultAzureCredential
 
 import requests
+from azure.identity import DefaultAzureCredential
 from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
@@ -92,9 +91,7 @@ class GraphAPIClient:
         logger.debug(f"authenticated against graph as: {self.get_me()}")
 
     def get_me(self):
-        res = self._session.get(
-            f"https://graph.microsoft.com/v1.0/me",
-            headers=self._header)
+        res = self._session.get(f"https://graph.microsoft.com/v1.0/me", headers=self._header)
 
         res.raise_for_status()
 

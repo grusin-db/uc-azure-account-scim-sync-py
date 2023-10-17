@@ -1,9 +1,9 @@
 import json
+import os
 from threading import RLock
 
 import fsspec
-import sys
-import os
+from adlfs import AzureBlobFileSystem
 
 
 class Cache:
@@ -19,8 +19,12 @@ class Cache:
         self._storage_account = storage_account
         self._container = container or os.getenv('AZURE_STORAGE_CONTAINER')
         self._path = path
-        self._storage_options = {'account_name': storage_account}
 
+        # if container is specified, we are using real adls
+        if self._container:
+            self._path = f"abfs://{self._container}/{path}"
+
+        self._storage_options = {'account_name': storage_account, 'anon': False}
         if tenat_id:
             self._storage_options['tenant_id'] = tenat_id
 
@@ -40,7 +44,10 @@ class Cache:
             if self._container is None and self._storage_account is None:
                 return fsspec.open(self._path, mode=mode, encoding="utf-8")
             else:
-                return fsspec.open(self._path, **self._storage_options)
+                # register 'abfs:/' hanlder
+                AzureBlobFileSystem(**self._storage_options)
+
+                return fsspec.open(self._path, mode=mode, **self._storage_options)
 
     def invalidate(self, key):
         with self._lock:

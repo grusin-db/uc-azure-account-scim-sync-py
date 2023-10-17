@@ -17,6 +17,7 @@ logger = logging.getLogger('sync')
 def graph_client():
     return GraphAPIClient()
 
+
 def test_me(graph_client: GraphAPIClient):
     assert graph_client.get_me() is not None
 
