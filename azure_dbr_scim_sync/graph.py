@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -53,6 +53,8 @@ class GraphSyncObject(BaseModel):
     service_principals: Optional[Dict[str, GraphServicePrincipal]] = Field(default_factory=lambda: {})
     groups: Optional[Dict[str, GraphGroup]] = Field(default_factory=lambda: {})
     errors: Optional[List] = Field(default_factory=lambda: [])
+    shallow_group_ids: Optional[Set(str)] = None
+    groups_for_member_sync_ids: Optional[Set(str)] = None
 
 
 class GraphAPIClient:
@@ -163,12 +165,21 @@ class GraphAPIClient:
 
             return sync_data.groups[id]
 
+        group_infos = {}
+
         for idx, group_name in enumerate(group_names):
-            logger.info(f"Downloading members of group: {group_name} ({idx+1}/{len(group_names)})")
+            logger.info(f"Getting group: {group_name} ({idx+1}/{len(group_names)})")
             group_info = self.get_group_by_name(group_name)
             if not group_info:
                 logger.warning(f"Group not found, skipping: {group_name}")
                 continue
+                
+            group_infos[group_name] = group_info
+
+
+        for idx, group_name in enumerate(group_infos):
+            logger.info(f"Downloading members of group: {group_name} ({idx+1}/{len(group_names)})")
+            group_info = group_infos[group_name]
 
             group_members = self.get_group_members(group_info['id'])
 
