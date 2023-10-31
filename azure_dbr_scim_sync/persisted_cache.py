@@ -1,11 +1,13 @@
 import json
+import logging
 import os
 from threading import RLock
-import logging
+
 import fsspec
 from adlfs import AzureBlobFileSystem
 
 logger = logging.getLogger('sync.cache')
+
 
 class Cache:
 
