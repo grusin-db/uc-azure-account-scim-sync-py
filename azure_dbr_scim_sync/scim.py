@@ -468,7 +468,7 @@ def sync(*,
     for group_merge_result in result.groups:
         if group_merge_result.external_id not in deep_sync_group_external_ids:
             logger.warning(
-                f"Shallow synced group detected, skipping member sync: name={group_merge_result.effective.display_name}, id={group_merge_result.external_id}"
+                f"Shallow synced group detected, skipping member sync for: name={group_merge_result.effective.display_name}, id={group_merge_result.external_id}"
             )
             continue
 
