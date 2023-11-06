@@ -195,12 +195,14 @@ def test_group_membership(account_client: AccountClient):
                         users=users,
                         groups=groups,
                         service_principals=[],
+                        deep_sync_group_external_ids=[g.external_id for g in groups],
                         dry_run_security_principals=False,
                         dry_run_members=True)
     sync_results = sync(account_client=account_client,
                         users=users,
                         groups=groups,
                         service_principals=[],
+                        deep_sync_group_external_ids=[g.external_id for g in groups],
                         dry_run_security_principals=False,
                         dry_run_members=False)
 
@@ -223,6 +225,11 @@ def test_group_membership(account_client: AccountClient):
     with pytest.raises(AssertionError):
         _verify_group_members(groups, sync_results)
 
-    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=[])
+    sync_results = sync(account_client=account_client,
+                        users=users,
+                        groups=groups,
+                        service_principals=[],
+                        deep_sync_group_external_ids=[g.external_id for g in groups],
+                        )
 
     _verify_group_members(groups, sync_results)

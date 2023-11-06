@@ -58,6 +58,7 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
         groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
         service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
+        deep_sync_group_external_ids=list(stuff_to_sync.deep_sync_groups),
         dry_run_security_principals=dry_run_security_principals,
         dry_run_members=dry_run_members,
         worker_threads=worker_threads)

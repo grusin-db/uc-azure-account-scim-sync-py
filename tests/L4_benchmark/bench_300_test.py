@@ -48,7 +48,12 @@ def test_300(account_client: AccountClient):
     # delete_groups_if_exists(account_client, [g.display_name for g in groups])
 
     # sync
-    sync_results = sync(account_client=account_client, users=users, groups=groups, service_principals=spns)
+    sync_results = sync(account_client=account_client,
+                        users=users,
+                        groups=groups,
+                        service_principals=spns,
+                        deep_sync_group_external_ids=[g.external_id for g in groups],
+                        )
 
     # verify if groups mach the results
     _verify_group_members(groups, sync_results)

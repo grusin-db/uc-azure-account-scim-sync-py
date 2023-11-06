@@ -411,10 +411,12 @@ def create_or_update_service_principals(client: AccountClient,
 #
 
 
-def sync(account_client: AccountClient,
+def sync(*,
+         account_client: AccountClient,
          users: Iterable[iam.User],
          groups: Iterable[iam.Group],
          service_principals: Iterable[iam.ServicePrincipal],
+         deep_sync_group_external_ids: Iterable[str],
          dry_run_security_principals=False,
          dry_run_members=False,
          worker_threads: int = 10):
@@ -464,6 +466,12 @@ def sync(account_client: AccountClient,
 
     # check which group members to add or remove
     for group_merge_result in result.groups:
+        if group_merge_result.external_id not in deep_sync_group_external_ids:
+            logger.warning(
+                f"Shallow synced group detected, skipping member sync: name={group_merge_result.effective.display_name}, id={group_merge_result.external_id}"
+            )
+            continue
+
         # desired group uses external_id's to show membership
         graph_group_member_ids = set(x.value for x in group_merge_result.desired.members)
 
@@ -482,12 +490,8 @@ def sync(account_client: AccountClient,
             member_dbr_id = dbr_member.value
             member_graph_id = dbr_to_graph_ids.get(member_dbr_id)
 
-            # fail if it's not a known member
-            if not member_graph_id:
-                raise ValueError(f"failed to obtain AAD object id for {member_dbr_id}: {dbr_member}")
-
             # if not in graph group membership, mark as to remove
-            if member_graph_id not in graph_group_member_ids:
+            if (not member_graph_id) or (member_graph_id not in graph_group_member_ids):
                 to_delete_member_dbr_ids.add(member_dbr_id)
                 continue
 
