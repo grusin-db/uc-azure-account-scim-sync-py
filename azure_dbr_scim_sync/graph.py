@@ -86,17 +86,8 @@ class GraphAPIClient:
     def _authenticate(self):
         credential = DefaultAzureCredential()
         self._token = credential.get_token('https://graph.microsoft.com/.default')
-        self._header = {"Authorization": f"Bearer {self._token[0]}"}
+        self._header = {"Authorization": f"Bearer {self._token}"}
         self._base_url = "https://graph.microsoft.com/"
-
-        logger.debug(f"authenticated against graph as: {self.get_me()}")
-
-    def get_me(self):
-        res = self._session.get(f"https://graph.microsoft.com/v1.0/me", headers=self._header)
-
-        res.raise_for_status()
-
-        return res.json()
 
     def get_group_by_name(self, name: str) -> dict:
         res = self._session.get(

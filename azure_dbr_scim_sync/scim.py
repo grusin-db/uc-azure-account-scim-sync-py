@@ -29,12 +29,18 @@ def get_account_client():
     if not account_id:
         raise ValueError("unknown account_id, set DATABRICKS_ACCOUNT_ID environment variable!")
 
+    logger.info(f"Using Databricks Account Id={account_id}")
+
     host = os.getenv("DATABRICKS_HOST")
     if not host:
         raise ValueError("unknown host, set DATABRICKS_HOST environment variable!")
 
-    client_id = os.getenv('ARM_CLIENT_ID') or os.getenv('DATABRICKS_ARM_CLIENT_ID')
-    client_secret = os.getenv('ARM_CLIENT_SECRET') or os.getenv('DATABRICKS_ARM_CLIENT_SECRET')
+    logger.info(f"Using Databricks Host={host}")
+
+    client_id = os.getenv('DATABRICKS_ARM_CLIENT_ID') or os.getenv('ARM_CLIENT_ID')
+    logger.info(f"Using Client ID={client_id}")
+    client_secret = os.getenv('DATABRICKS_ARM_CLIENT_SECRET') or os.getenv('ARM_CLIENT_SECRET')
+    logger.info(f"Using Client Secret={'[REDACTED]' if client_secret else ''}")
 
     if client_id and client_secret:
         logger.info("Using env variables auth")
@@ -42,7 +48,7 @@ def get_account_client():
                              account_id=account_id,
                              client_id=client_id,
                              client_secret=client_secret,
-                             auth_type="azure",
+                             auth_type="azure-client-secret",
                              product="azure_dbr_scim_sync",
                              product_version=__version__)
     else:
@@ -298,7 +304,7 @@ def create_or_update_user(client: AccountClient, desired_user: iam.User, dry_run
     return _generic_create_or_update(mapper=_generic_type_map['user'],
                                      desired=desired_user,
                                      actual=get_user_by_email(client, desired_user.user_name),
-                                     compare_fields=["displayName"],
+                                     compare_fields=["displayName", "active"],
                                      sdk_module=client.users,
                                      dry_run=dry_run)
 
@@ -387,7 +393,7 @@ def create_or_update_service_principal(client: AccountClient,
                                      desired=desired_service_principal,
                                      actual=get_service_principals_by_app(
                                          client, desired_service_principal.application_id),
-                                     compare_fields=["displayName"],
+                                     compare_fields=["displayName", "active"],
                                      sdk_module=client.service_principals,
                                      dry_run=dry_run)
 

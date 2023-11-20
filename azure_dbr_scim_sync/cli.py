@@ -29,7 +29,7 @@ from azure_dbr_scim_sync.scim import get_account_client, sync
               show_default=True)
 @click.option('--worker-threads', default=10, show_default=True)
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads):
-    logging.basicConfig(stream=sys.stderr,
+    logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
     logger = logging.getLogger('sync')
