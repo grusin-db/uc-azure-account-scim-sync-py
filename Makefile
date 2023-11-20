@@ -1,6 +1,6 @@
 dev:
 	python -m venv .venv
-	. .venv/bin/activate | .venv/Scripts/activate
+	. .venv/bin/activate
 	pip install '.[dev]'
 
 install:
