@@ -86,7 +86,7 @@ class GraphAPIClient:
     def _authenticate(self):
         credential = DefaultAzureCredential()
         self._token = credential.get_token('https://graph.microsoft.com/.default')
-        self._header = {"Authorization": f"Bearer {self._token}"}
+        self._header = {"Authorization": f"Bearer {self._token.token}"}
         self._base_url = "https://graph.microsoft.com/"
 
     def get_group_by_name(self, name: str) -> dict:
