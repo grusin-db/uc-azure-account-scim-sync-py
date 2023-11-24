@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List, Optional
+import json
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -55,6 +56,10 @@ class GraphSyncObject(BaseModel):
     errors: Optional[List] = Field(default_factory=lambda: [])
     deep_sync_groups: Optional[Dict[str, Dict]] = Field(default_factory=lambda: {})
 
+    def save_to_json_file(self, file_name: str):
+        logger.info(f"Saving GraphSyncObject to {file_name}")
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(self.model_dump_json(indent=4))
 
 class GraphAPIClient:
 
