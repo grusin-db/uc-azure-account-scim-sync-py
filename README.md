@@ -69,10 +69,10 @@ Auth uses `databricks-sdk` python package which offers [variety of authenticatio
   - Troubleshoot auth errors:
     - Once authenticated, run `az account get-access-token --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d` (the `2f...c1d` is the ID of Azure Databricks Service, [not a secret value in anyway](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/service-prin-aad-token#--get-a-microsoft-entra-id-access-token-with-the-azure-cli)), it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`.
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/databricks/databricks-sdk-py#azure-native-authentication):
-  - `DATABRICKS_ACCOUNT_ID` - the ID of your databricks account (you can find it in [Account Console](https://accounts.azuredatabricks.net/))
-  - `DATABRICKS_HOST` - endpoint url, static value always pointing to `https://accounts.azuredatabricks.net/`
-  - `ARM_CLIENT_ID` - ID of a Microsoft Entra application
+  - `DATABRICKS_ACCOUNT_ID` - see azure cli section
+  - `DATABRICKS_HOST` - see azure cli section
   - `ARM_TENANT_ID` - ID of the application's Microsoft Entra tenant
+  - `ARM_CLIENT_ID` - ID of a Microsoft Entra application
   - `ARM_CLIENT_SECRET` - one of the application's client secrets
 
 The Environment variables take precedence over the Azure CLI auth.
@@ -83,6 +83,22 @@ Sync tools uses cache of translation of AAD/Entra object_ids (example: 748fa79a-
 
 For storing the cache tools needs to have access to a container and optionally a subfolder, where it can write it's cache files.
 
+Auth uses `azure-identity` python package which offsers [variety of authentication methods](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#defaultazurecredential), the two common ones used are:
+
+- **Azure CLI**, refer to section above (ADD auth) for details:
+  - Once logged in, additionally you will need to configure two environment variables:
+    - `AZURE_STORAGE_ACCOUNT_NAME` - the name of the azure storage account, for example: `scimsynccachestorage`
+    - `AZURE_STORAGE_CONTAINER` - the name of the container, for example: `data`. The name can be followed by a subfolder for example `data\some\folder` will cause cache to be written to container `data` and then placed in `some\folder` folder
+- **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/fsspec/adlfs#setting-credentials):
+  - `AZURE_STORAGE_ACCOUNT_NAME` - see azure cli section
+  - `AZURE_STORAGE_CONTAINER` - see azure cli section
+  - `AZURE_STORAGE_TENANT_ID` - ID of the application's Microsoft Entra tenant
+  - `AZURE_STORAGE_CLIENT_ID` - ID of a Microsoft Entra application
+  - `AZURE_STORAGE_CLIENT_SECRET` - one of the application's client secrets
+
+The Environment variables take precedence over the Azure CLI auth.
+
+
 ## Sync: Dry run
 
 The sync tool offers two dry run modes, allowing to first see, and then approve changes:
@@ -91,25 +107,6 @@ The sync tool offers two dry run modes, allowing to first see, and then approve 
 - `--dry-run-members`: applies any pending changes from above, and displays any group members that would be added or removed. In order to apply thse changes, run without any dry run modes!
 
 ## How to run syncing
-
-### Configure authentication
-
-Authentication approach dependson on what you are trying to do, and from which place. If you are planning to run it from your laptop (highly recommended for first few dry runs)
-
-- use `az login` to get credentials for graph, databricks and storage
-- set environment variables for databricks account: `DATABRICKS_ACCOUNT_ID` and `DATABRICKS_HOST` (most likely it will be `https://accounts.azuredatabricks.net/` if you are on azure)
-- optinally, if you dont want to use `az login` credentials for specific resource, set enviroment variables, detail below:
-  - (optional) set environment variables for graph api access:
-    - `GRAPH_ARM_TENANT_ID`, `GRAPH_ARM_CLIENT_ID` and `GRAPH_ARM_CLIENT_SECRET`
-    - the SPN will need to have Active Directory rights to read users, groups and service principals. Write rights are not required.
-  - (optional) set environment variables for storage cache of graph/aad api ids to databricks ids
-    - `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_TENANT_ID`, `AZURE_STORAGE_CLIENT_ID`, `AZURE_STORAGE_CLIENT_SECRET`
-    - the defined SPN will need to have blob storage contributor rights on container.
-    - `AZURE_STORAGE_CONTAINER` must point to valid container, can be followed by subpaths, for example: `datalake/some_folder/` would store cache in container `datalake` in folder `some_folder`
-    - if not set, local file system will be used and cache data needs to be persisted by external tooling
-  - (optional) set environment variables for databricks account access:
-    - `DATABRICKS_ARM_CLIENT_ID`, `DATABRICKS_ARM_CLIENT_SECRET`,
-  - in case both `GRAPH_ARM_...` and `DATABRICKS_ARM_...` credentials are the same, you can just use typical `ARM_...` env variables
 
 - create JSON file containing the list of AAD groups you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`)
 -withut need of using specifc ones for graph and databricks account.
