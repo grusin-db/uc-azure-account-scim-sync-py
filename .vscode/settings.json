@@ -2,5 +2,10 @@
     "python.testing.pytestArgs": [],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.envFile": "${workspaceFolder}/.envs"
+    "python.envFile": "${workspaceFolder}/.envs",
+    "cSpell.words": [
+        "Datalake",
+        "Entra",
+        "SCIM"
+    ]
 }

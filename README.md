@@ -2,7 +2,7 @@
 
 An example of end to end synchronization of the whitelisted Azure Active Directory groups and their members into the Databricks Account.
 
-This python based application supports synchronisation of:
+This python based application supports synchronization of:
 
 - Users
 - Service Principals
@@ -43,26 +43,34 @@ Auth uses `azure-identity` python package which offsers [variety of authenticati
 
   - To authenticate, run: `az login --tenant <TenantID>`. The auth **might** work if you just run `az login`, but then you may face issues with MFA related errors when you user account has access to multiple azure tenants.
   - Azure CLI installation manuals: [macOS](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos), [windows](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli), [linux](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt). 
-  - Note: when runinng from `azure devops`, hosted agents have it already preinstalled.
+  - Note: when running from `azure devops`, hosted agents have it already preinstalled.
   - Troubleshoot auth errors:
-    - Once authenticated, run `az account get-access-token --resource https://graph.microsoft.com/`, it should return `json` document with token. If you get MFA erros make sure you include  `--tenant` parameter in your `az login`
+    - Once authenticated, run `az account get-access-token --resource https://graph.microsoft.com/`, it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`
 
-- **Environment** allowing authentication of servie principals via environment variables. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
+- **Environment** allowing authentication of service principals via environment variables. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
   - `AZURE_CLIENT_ID` - ID of a Microsoft Entra application
   - `AZURE_TENANT_ID` - ID of the application's Microsoft Entra tenant
   - `AZURE_CLIENT_SECRET` - one of the application's client secrets
+
+The Environment variables take precedence over the Azure CLI auth.
 
 ### Databricks Account
 
 You need to be logged in as [Account admin](https://docs.databricks.com/en/administration-guide/users-groups/index.html#who-can-manage-identities-in-databricks) in order to modify the identities in databricks account.
 
-In most cases - if you are reading this manual - you should be already acount admin. If in doubt, the easiest way to check if you are the admin is to go to [Account Console](https://accounts.azuredatabricks.net/) - if you are able to log in, you are admin
+In most cases - if you are reading this manual - you should be already account admin. If in doubt, the easiest way to check if you are the admin is to go to [Account Console](https://accounts.azuredatabricks.net/) - if you are able to log in, you are admin
 
-Auth uses `databricks-sdk` python package which offsers [variety of authentication methods](https://github.com/databricks/databricks-sdk-py#authentication), the two common ones used are:
+Auth uses `databricks-sdk` python package which offers [variety of authentication methods](https://github.com/databricks/databricks-sdk-py#authentication), the two common ones used are:
+
+- **Azure CLI**, refer to section above (ADD auth) for details
+  - Once logged in, additionally you will need to configure two environment variables:
+    - `DATABRICKS_ACCOUNT_ID` - the ID of your databricks account (you can find it in [Account Console](https://accounts.azuredatabricks.net/))
+    - `DATABRICKS_HOST` - endpoint url, static value always pointing to `https://accounts.azuredatabricks.net/`
+  - Troubleshoot auth errors:
+    - Once authenticated, run `az account get-access-token --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d` (the `2f...c1d` is the ID of Azure Databricks Service, [not a secret value in anyway](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/service-prin-aad-token#--get-a-microsoft-entra-id-access-token-with-the-azure-cli)), it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`.
 
 
-
-
+The Environment variables take precedence over the Azure CLI auth.
 
 ## Azure Datalake Storage Gen2 for cache
 
