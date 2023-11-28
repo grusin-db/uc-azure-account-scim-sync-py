@@ -20,7 +20,7 @@ It's highly recommended to first trying running the tool from your local user ac
 
 The authentication is decoupled from the sync logic, hence it's possible to change way of authentication (user vs. service principal auth) via change of enviroment settings/variables without need of changing any code. Please read more about it in respective sections below.
 
-### Azure Active Directory or Entra (via graph API)
+### Azure Active Directory or Entra (via graph API) Authentication
 
 The list of security permission you will need:
 
@@ -47,14 +47,14 @@ Auth uses `azure-identity` python package which offsers [variety of authenticati
   - Troubleshoot auth errors:
     - Once authenticated, run `az account get-access-token --resource https://graph.microsoft.com/`, it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`
 
-- **Environment** allowing authentication of service principals via environment variables. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
+- **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
   - `AZURE_CLIENT_ID` - ID of a Microsoft Entra application
   - `AZURE_TENANT_ID` - ID of the application's Microsoft Entra tenant
   - `AZURE_CLIENT_SECRET` - one of the application's client secrets
 
 The Environment variables take precedence over the Azure CLI auth.
 
-### Databricks Account
+### Databricks Account Authentication
 
 You need to be logged in as [Account admin](https://docs.databricks.com/en/administration-guide/users-groups/index.html#who-can-manage-identities-in-databricks) in order to modify the identities in databricks account.
 
@@ -68,11 +68,16 @@ Auth uses `databricks-sdk` python package which offers [variety of authenticatio
     - `DATABRICKS_HOST` - endpoint url, static value always pointing to `https://accounts.azuredatabricks.net/`
   - Troubleshoot auth errors:
     - Once authenticated, run `az account get-access-token --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d` (the `2f...c1d` is the ID of Azure Databricks Service, [not a secret value in anyway](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/service-prin-aad-token#--get-a-microsoft-entra-id-access-token-with-the-azure-cli)), it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`.
-
+- **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/databricks/databricks-sdk-py#azure-native-authentication):
+  - `DATABRICKS_ACCOUNT_ID` - the ID of your databricks account (you can find it in [Account Console](https://accounts.azuredatabricks.net/))
+  - `DATABRICKS_HOST` - endpoint url, static value always pointing to `https://accounts.azuredatabricks.net/`
+  - `ARM_CLIENT_ID` - ID of a Microsoft Entra application
+  - `ARM_TENANT_ID` - ID of the application's Microsoft Entra tenant
+  - `ARM_CLIENT_SECRET` - one of the application's client secrets
 
 The Environment variables take precedence over the Azure CLI auth.
 
-## Azure Datalake Storage Gen2 for cache
+## Azure Datalake Storage Gen2 (cache storage) Authentication
 
 Sync tools uses cache of translation of AAD/Entra object_ids (example: 748fa79a-aaaa-40a5-9597-1b50cbb9a392) to Databricks Account IDs (1236734578586). This cache is automatically maintained and is self healing, hence it does not have any side effects except allowing scim sync tool to run 10x faster with it, than without.
 
