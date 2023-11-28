@@ -91,11 +91,12 @@ Auth uses `azure-identity` python package which offsers [variety of authenticati
 
 - **Azure CLI**, allowing user to authenticate via device code, or via browser auth. Without need of storing any credentials in enviroment, or any config files. This is the best practice method for authentication from local machine.
 
-  - To authenticate, run: `az login --tenant <TenantID>`. The auth **might** work if you just run `az login`, but then you may face issues with MFA related errors when you user account has access to multiple azure tenants.
-  - Azure CLI installation manuals: [macOS](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos), [windows](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli), [linux](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt). 
-  - Note: when running from `azure devops`, hosted agents have it already preinstalled.
+  - Make sure that you are authenticated to correct tenant in [Azure Portal](http://portal.azure.com)
+  - To 'authenticate' the shell, run: `az login --tenant <TenantID>`. The auth **might** work if you just run `az login`, but then you may face issues with MFA related errors when you user account has access to multiple azure tenants.
+  - Azure CLI installation manual: [macOS](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos), [windows](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli), [linux](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt). `azure devops` hosted agents have it already preinstalled.
   - Troubleshoot auth errors:
     - Once authenticated, run `az account get-access-token --resource https://graph.microsoft.com/`, it should return `json` document with token. If you get MFA errors make sure you include  `--tenant` parameter in your `az login`
+    - If you see may see `jwt ... token` related errors, this usually can be fixed by cleaning login cache `az cache purge`
 
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
   - `AZURE_CLIENT_ID` - ID of a Microsoft Entra application
@@ -129,14 +130,14 @@ The Environment variables take precedence over the Azure CLI auth.
 
 ## Azure Datalake Storage Gen2 (cache storage) Authentication
 
-Sync tools uses cache of translation of AAD/Entra object_ids (example: 748fa79a-aaaa-40a5-9597-1b50cbb9a392) to Databricks Account IDs (1236734578586). This cache is automatically maintained and is self healing, hence it does not have any side effects except allowing scim sync tool to run 10x faster with it, than without.
+Sync tools uses cache of translation of AAD/Entra object IDs (example: 748fa79a-aaaa-40a5-9597-1b50cbb9a392) to Databricks Account object IDs (1236734578586). This cache is automatically maintained and is self healing, hence it does not have any side effects except allowing scim sync tool to run 10x faster with it, than without.
 
 For storing the cache tools needs to have access to a container and optionally a subfolder, where it can write it's cache files.
 
 Auth uses `azure-identity` python package which offers [variety of authentication methods](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#defaultazurecredential), the two common ones used are:
 
 - **Azure CLI**, refer to section above (ADD auth) for details:
-  - Once logged in, additionally you will need to configure two environment variables:
+  - Once logged in, additionally set two environment variables:
     - `AZURE_STORAGE_ACCOUNT_NAME` - the name of the azure storage account, for example: `myscimsync`
     - `AZURE_STORAGE_CONTAINER` - the name of the container, for example: `data`. The name can be followed by a subfolder for example `data\some\folder` will cause cache to be written to container `data` and then placed in `some\folder` folder
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/fsspec/adlfs#setting-credentials):
@@ -155,14 +156,13 @@ Currently package for this code is not being distributed, you need to build it y
 - run `make dev` (will put you in `.venv`)
 - run `make dist`
 - in `dist` folder package placed will be
-- run `make install` to install package
+- run `make install` to install the package locally
 - if you are in `.venv`, you should be able to run `azure_dbr_scim_sync --help`
-- if you are not in `.venv` follow on screen instructions regarding placement of the cli command(s)
-
+- if you are not in `.venv` follow on screen instructions regarding placement of the CLI command
 
 ## Limitations
 
-- AAD disabled Users and Service Principals are only disabled in account console when they are being synced, as in being member of the group that is curently being synced. Hence if disabled user gets also removed from the groups, then these users wont be synced back to account console anymore.
+- Inactive AAD Users and Service Principals are only inactivated in Databricks Account when they are being synced, as in being member of the group that is being synced. For example, if dis-activated user gets also removed from the groups, then this user wont be taking part of sync anymore, and due to this this user wont be deactivated in Databricks Account.
   - Workaround for this is to disable User or Service Princial in AAD and keep them as members of groups they used to be in. This way next full sync will disable them in account console.
 
 ## Near time roadmap
