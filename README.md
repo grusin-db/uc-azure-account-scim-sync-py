@@ -148,17 +148,6 @@ Auth uses `azure-identity` python package which offers [variety of authenticatio
 
 The Environment variables take precedence over the Azure CLI auth.
 
-## Limitations
-
-- AAD disabled Users and Service Principals are only disabled in account console when they are being synced, as in being member of the group that is curently being synced. Hence if disabled user gets also removed from the groups, then these users wont be synced back to account console anymore.
-  - Workaround for this is to disable User or Service Princial in AAD and keep them as members of groups they used to be in. This way next full sync will disable them in account console.
-
-## Near time roadmap
-
-- enable incremental pgraph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
-- enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
-- enable ability to run directly from databricks workflows, with simple installer
-
 ## Building a package / Local development
 
 Currently package for this code is not being distributed, you need to build it yourself, follow these steps to do so:
@@ -169,4 +158,16 @@ Currently package for this code is not being distributed, you need to build it y
 - run `make install` to install package
 - if you are in `.venv`, you should be able to run `azure_dbr_scim_sync --help`
 - if you are not in `.venv` follow on screen instructions regarding placement of the cli command(s)
+
+
+## Limitations
+
+- AAD disabled Users and Service Principals are only disabled in account console when they are being synced, as in being member of the group that is curently being synced. Hence if disabled user gets also removed from the groups, then these users wont be synced back to account console anymore.
+  - Workaround for this is to disable User or Service Princial in AAD and keep them as members of groups they used to be in. This way next full sync will disable them in account console.
+
+## Near time roadmap
+
+- enable incremental pgraph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
+- enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
+- enable ability to run directly from databricks workflows, with simple installer
 
