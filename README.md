@@ -12,6 +12,56 @@ Yes, that means that group in a group, a.k.a. **nested groups are supported**!
 
 When doing synchronization no users, service principals or groups are ever deleted. Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones. Group members are fully sychronized to match what is present in AAD.
 
+## Running Sync
+
+Synchronization is based on a list of groups that you would like to sync. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take few minutes.
+
+Normally there are two usecases/patterns I have observed:
+
+- Selective sync of newly to be onboarded groups, usually of adhoc nature, always needed when onboarding a new team to Unity Catalog. Normally you would like to sync all team groups and their members before running the onboarding process. This way that all the access could be set by your CI/CD automation (looking at you here [databricks terraform provider](https://registry.terraform.io/providers/databricks/databricks/latest/docs)). Without doing this step automation would most likely fail because the groups or other identities would not be yet presentin databricks account.
+- Full sync, running on a schedule very few hours, that will be synchronizing all already onboarded teams and their groups.
+
+The interface to faciciliate these two usecases is the same, the only difference is the list of groups, and time needed to perform the sync. 
+
+To run the sync follow these steps:
+
+- Authenticate: [Authentication steps described in section below](#authentication)
+- Create `json` file containing the list of AAD groups names you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`). Normally for the first run you should chose few groups only, it will make experience better.
+- Run sync with dry run first: `azure_dbr_scim_sync --groups-json-file groups_to_sync.json --dry-run-security-principals --dry-run-members`.
+- To get more information about the process add:
+  - `--verbose` (logs information also about identities that did not change, by default only changes are logged) 
+  - or `--debugg` (very detail, incl. api calls)
+- Follow the prompts on the screen with regards to how to proceed with the [dry run](#dry-run-sync) levels.
+  - If suggested list of changes look like what you would expect run without proposed `--dry-run-...` parameter(s)
+- Repeat the steps again, but on bigger list of groups.
+
+Reference of command line:
+
+```shell
+$ ✗ azure_dbr_scim_sync --help
+Usage: azure_dbr_scim_sync [OPTIONS]
+
+Options:
+  --groups-json-file TEXT         list of AAD groups to sync (json formatted)
+                                  [required]
+  --verbose                       verbose information about changes
+  --debug                         show API call
+  --dry-run-security-principals   dont make any changes to users, groups or
+                                  service principals, just display changes
+  --dry-run-members               dont make any changes to group members, just
+                                  display changes
+  --worker-threads INTEGER        [default: 10]
+  --save-graph-response-json TEXT
+  --help                          Show this message and exit.
+```
+
+### Dry run sync
+
+The sync tool offers two dry run modes, allowing to first see, and then approve changes:
+
+- `--dry-run-security-principals`: allows to see which users, service principals and groups (not members!) would be added, or changed. At this point, if any changes are present the group membership synchronization will be skipped, and only can be continued once changes are applied.
+- `--dry-run-members`: applies any pending changes from above, and displays any group members that would be added or removed. In order to apply group members changes, run without any dry run modes.
+
 ## Authentication
 
 Sync tool needs authentication in order to connect to **AAD**, **Azure Databricks Account**, and **Azure Datalake Storage Gen2** for cache purpose.
@@ -83,11 +133,11 @@ Sync tools uses cache of translation of AAD/Entra object_ids (example: 748fa79a-
 
 For storing the cache tools needs to have access to a container and optionally a subfolder, where it can write it's cache files.
 
-Auth uses `azure-identity` python package which offsers [variety of authentication methods](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#defaultazurecredential), the two common ones used are:
+Auth uses `azure-identity` python package which offers [variety of authentication methods](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#defaultazurecredential), the two common ones used are:
 
 - **Azure CLI**, refer to section above (ADD auth) for details:
   - Once logged in, additionally you will need to configure two environment variables:
-    - `AZURE_STORAGE_ACCOUNT_NAME` - the name of the azure storage account, for example: `scimsynccachestorage`
+    - `AZURE_STORAGE_ACCOUNT_NAME` - the name of the azure storage account, for example: `myscimsync`
     - `AZURE_STORAGE_CONTAINER` - the name of the container, for example: `data`. The name can be followed by a subfolder for example `data\some\folder` will cause cache to be written to container `data` and then placed in `some\folder` folder
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/fsspec/adlfs#setting-credentials):
   - `AZURE_STORAGE_ACCOUNT_NAME` - see azure cli section
@@ -98,75 +148,25 @@ Auth uses `azure-identity` python package which offsers [variety of authenticati
 
 The Environment variables take precedence over the Azure CLI auth.
 
-
-## Sync: Dry run
-
-The sync tool offers two dry run modes, allowing to first see, and then approve changes:
-
-- `--dry-run-security-principals`: allows to see which users, service principals and groups (not members!) would be added, or changed. At this point, if any changes are present the group membership synchornization will be skipped, and only can be continued once changes are applied
-- `--dry-run-members`: applies any pending changes from above, and displays any group members that would be added or removed. In order to apply thse changes, run without any dry run modes!
-
-## How to run syncing
-
-- create JSON file containing the list of AAD groups you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`)
--withut need of using specifc ones for graph and databricks account.
-- `pip install azure_dbr_scim_sync` to install this package, you should pin in version number to maintain stability of the interface
-- read the manual:
-
-```shell
-$ azure_dbr_scim_sync --help
-Usage: azure_dbr_scim_sync [OPTIONS]
-
-Options:
-  --groups-json-file TEXT  list of AAD groups to sync (json formatted)
-                           [required]
-  --verbose                verbose information about changes
-  --debug                  show API call
-  --dry-run                dont make any changes, just display
-  --help                   Show this message and exit.
-```
-
-- dry run: `azure_dbr_scim_sync --groups-json-file groups_to_sync.json --dry-run`
-- if everything works ok, run the command again, but this time without `--dry-run`.
-- feel free to increase verbosity with `--verbose`, or even debug API calls with `--debug`
-
 ## Limitations
 
-- AAD disabled users or service principals are not being disabled in databricks account (needs change capture sync feature)
-- AAD deleted users or service principals are not being deleted from databricks account (needs change capture sync feature)
-- Only full sync is supported (needs change capture sync feature, obviously)
+- AAD disabled Users and Service Principals are only disabled in account console when they are being synced, as in being member of the group that is curently being synced. Hence if disabled user gets also removed from the groups, then these users wont be synced back to account console anymore.
+  - Workaround for this is to disable User or Service Princial in AAD and keep them as members of groups they used to be in. This way next full sync will disable them in account console.
 
 ## Near time roadmap
 
-- enable incremental graph api change capture, so that only group members and users who changed since last ran would be synced
+- enable incremental pgraph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
 - enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
 - enable ability to run directly from databricks workflows, with simple installer
 
-## Local development
+## Building a package / Local development
 
-- run `make dev`
-- set env variables `export ARM_...=123`, or if you are using VS Code tests ASLO create `.envs` file:
+Currently package for this code is not being distributed, you need to build it yourself, follow these steps to do so:
 
-```sh
-# common for everything
-ARM_TENANT_ID=...
+- run `make dev` (will put you in `.venv`)
+- run `make dist`
+- in `dist` folder package placed will be
+- run `make install` to install package
+- if you are in `.venv`, you should be able to run `azure_dbr_scim_sync --help`
+- if you are not in `.venv` follow on screen instructions regarding placement of the cli command(s)
 
-# graph api access creds
-GRAPH_ARM_CLIENT_ID=...
-GRAPH_ARM_CLIENT_SECRET=...
-
-# to keep cache of aad id <> dbr id mapping
-AZURE_STORAGE_TENANT_ID=...
-AZURE_STORAGE_CLIENT_ID=...
-AZURE_STORAGE_CLIENT_SECRET=...
-AZURE_STORAGE_ACCOUNT_NAME=...
-
-# databricks account details
-DATABRICKS_ACCOUNT_ID=...
-DATABRICKS_HOST="https://accounts.azuredatabricks.net/"
-```
-
-- run `make install && make test` to install package locally and run tests
-- run `your favorite text editor` and make code changes
-- run `make fmt && make lint && make install && make test` to format, install package locally and test your changes
-- `git commit && git push`
