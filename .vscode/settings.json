@@ -2,10 +2,13 @@
     "python.testing.pytestArgs": [],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.envFile": "${workspaceFolder}/.envs",
+    "python.envFile": "${workspaceFolder}/.databricks/.databricks.env",
     "cSpell.words": [
         "Datalake",
         "Entra",
         "SCIM"
-    ]
+    ],
+    "databricks.python.envFile": "${workspaceFolder}/.envs",
+    "jupyter.interactiveWindow.cellMarker.codeRegex": "^# COMMAND ----------|^# Databricks notebook source|^(#\\s*%%|#\\s*\\<codecell\\>|#\\s*In\\[\\d*?\\]|#\\s*In\\[ \\])",
+    "jupyter.interactiveWindow.cellMarker.default": "# COMMAND ----------"
 }

@@ -111,12 +111,21 @@ class GraphAPIClient:
     def get_group_members(self,
                           group_id: str,
                           select="id,displayName,mail,mailNickname,appId,accountEnabled") -> dict:
-        res = self._session.get(f"{self._base_url}/beta/groups/{group_id}/members?$select={select}",
-                                headers=self._header)
+        members = []
+        query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
+        
+        while query:
+            res = self._session.get(query, headers=self._header)
+            
+            res.raise_for_status()
 
-        res.raise_for_status()
+            j = res.json()
+            query = j.get('@odata.nextLink')
+            value = j.get("value")
+            if value:
+                members.extend(value)
 
-        return res.json().get("value")
+        return members
 
     def get_objects_for_sync(self, group_names):
         sync_data = GraphSyncObject()
@@ -203,6 +212,7 @@ class GraphAPIClient:
         msg = f"Downloaded: errors={len(sync_data.errors)}, groups={len(sync_data.groups)}, users={len(sync_data.users)}, service_principals={len(sync_data.service_principals)}"
         if sync_data.errors:
             logger.error(msg)
+            raise ValueError(msg)
         else:
             logger.info(msg)
 
