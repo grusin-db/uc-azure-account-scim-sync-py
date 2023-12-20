@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import json
 import os
 
@@ -9,6 +9,7 @@ from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from copy import deepcopy
 
 logger = logging.getLogger('sync.graph')
 
@@ -133,7 +134,7 @@ class GraphAPIClient:
 
         return members
 
-    def get_objects_for_sync(self, group_names):
+    def get_objects_for_sync(self, group_names, group_search_depth: int=1):
         sync_data = GraphSyncObject()
 
         def _register_user(d):
@@ -176,47 +177,56 @@ class GraphAPIClient:
             return sync_data.groups[id]
         
         deep_sync_groups_xref: Dict[str, Dict] = {}
+        visited_group_names: Set[str] = set()
 
-        # get all groups for deep sync (incl. members)
-        for idx, group_name in enumerate(group_names):
-            logger.info(f"Getting group: {group_name} ({idx+1}/{len(group_names)})")
-            group_info = self.get_group_by_name(group_name)
-            if not group_info:
-                logger.warning(f"Group not found, skipping: {group_name}")
-                continue
+        group_names = set(group_names)
 
-            deep_sync_groups_xref[group_info['id']] = group_info
+        for depth in range(group_search_depth):
+            logger.info(f"Performing group search (depth {depth+1} of {group_search_depth})")
 
-        # get actual members
-        for idx, group_id in enumerate(deep_sync_groups_xref):
-            group_info = deep_sync_groups_xref[group_id]
-            group_name = group_info["displayName"]
-            logger.info(
-                f"Downloading members of group: {group_name} ({idx+1}/{len(deep_sync_groups_xref)})")
+            for group_name in deepcopy(sorted(set(group_names))):
+                if group_name in visited_group_names:
+                    continue
+                
+                visited_group_names.add(group_name)
 
-            group_members = self.get_group_members(group_info['id'])
+                logger.info(f"Resolving group by name: {group_name}")
+                group_info = self.get_group_by_name(group_name)
+                if not group_info:
+                    logger.warning(f"Group not found, skipping: {group_name}")
+                    continue
 
-            _register_group(group_info)
+                group_id = group_info['id']
+                deep_sync_groups_xref[group_id] = group_info
 
-            group = sync_data.groups[group_info['id']]
+                logger.info(f"Downloading members of group_name: {group_name} (id={group_id})")
+                group_members = self.get_group_members(group_id)
 
-            for m in group_members:
-                # remove any None values, without that aliases dont work well
-                m = {k: v for k, v in m.items() if v is not None}
+                _register_group(group_info)
 
-                if m['@odata.type'] == '#microsoft.graph.user':
-                    r = _register_user(m)
+                group = sync_data.groups[group_id]
 
-                if m['@odata.type'] == '#microsoft.graph.servicePrincipal':
-                    r = _register_service_principal(m)
+                for m in group_members:
+                    # remove any None values, without that aliases dont work well
+                    m = {k: v for k, v in m.items() if v is not None}
 
-                if m['@odata.type'] == '#microsoft.graph.group':
-                    r = _register_group(m)
+                    if m['@odata.type'] == '#microsoft.graph.user':
+                        r = _register_user(m)
 
-                if isinstance(r, Exception):
-                    sync_data.errors.append((m, r))
-                else:
-                    group.members[r.id] = r
+                    if m['@odata.type'] == '#microsoft.graph.servicePrincipal':
+                        r = _register_service_principal(m)
+
+                    if m['@odata.type'] == '#microsoft.graph.group':
+                        r = _register_group(m)
+                        group_names.add(r.display_name)
+
+                    if isinstance(r, Exception):
+                        sync_data.errors.append((m, r))
+                    else:
+                        group.members[r.id] = r
+
+        
+        
         msg = f"Downloaded: errors={len(sync_data.errors)}, groups={len(sync_data.groups)}, users={len(sync_data.users)}, service_principals={len(sync_data.service_principals)}"
         
         if sync_data.errors:

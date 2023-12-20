@@ -10,7 +10,7 @@ This python based application supports synchronization of:
 
 Yes, that means that group in a group, a.k.a. **nested groups are supported**!
 
-When doing synchronization no users, service principals or groups are ever deleted. Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones. Group members are fully sychronized to match what is present in AAD.
+When doing synchronization no users, service principals or groups are ever deleted. Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones. Group members are fully sychronized to match what is present in AAD. Optionally deep group search is possible.
 
 ## Running Sync
 
@@ -21,7 +21,9 @@ Normally there are two usecases/patterns I have observed:
 - Selective sync of newly to be onboarded groups, usually of adhoc nature, always needed when onboarding a new team to Unity Catalog. Normally you would like to sync all team groups and their members before running the onboarding process. This way that all the access could be set by your CI/CD automation (looking at you here [databricks terraform provider](https://registry.terraform.io/providers/databricks/databricks/latest/docs)). Without doing this step automation would most likely fail because the groups or other identities would not be yet presentin databricks account.
 - Full sync, running on a schedule very few hours, that will be synchronizing all already onboarded teams and their groups.
 
-The interface to faciciliate these two usecases is the same, the only difference is the list of groups, and time needed to perform the sync. 
+The interface to faciciliate these two usecases is the same, the only difference is the list of groups, and time needed to perform the sync.
+
+It is possible to deep search group members for additional groups to sync by adjusting `--group-search-depth`. Default value of 1 means that only groups defined in the input file would be synced, value of `2` would mean that child groups of these groups would be searched and synced as well. There is no hard depth limit, but **caution** has to be excercised when using this paramater, because too deep search can cause too many groups to be discovered and in effect platform limits will be hit. It it advised to run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups dicovered during the deep search.
 
 To run the sync follow these steps:
 
@@ -45,13 +47,21 @@ Options:
   --groups-json-file TEXT         list of AAD groups to sync (json formatted)
                                   [required]
   --verbose                       verbose information about changes
-  --debug                         show API call
+  --debug                         more verbose, shows API calls
   --dry-run-security-principals   dont make any changes to users, groups or
-                                  service principals, just display changes
+                                  service principals, just display pending
+                                  changes
   --dry-run-members               dont make any changes to group members, just
-                                  display changes
-  --worker-threads INTEGER        [default: 10]
+                                  display pending membership changes
+  --worker-threads INTEGER        number of concurent web requests to perform
+                                  against SCIM  [default: 10]
   --save-graph-response-json TEXT
+                                  saves graph response into json file
+  --query-graph-only              only downloads information from graph (does
+                                  not perform SCIM sync)
+  --group-search-depth INTEGER    defines nested group recursion search depth,
+                                  default is to search only groups provided as
+                                  input  [default: 1]
   --help                          Show this message and exit.
 ```
 
