@@ -1,9 +1,10 @@
 import logging
 from typing import Dict, List, Optional
 import json
+import os
 
 import requests
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, DeviceCodeCredential
 from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
@@ -89,7 +90,12 @@ class GraphAPIClient:
         self._authenticate()
 
     def _authenticate(self):
-        credential = DefaultAzureCredential()
+        if os.environ.get('AZURE_CLIENT_ID') == 'DeviceCodeAuth' and os.environ.get('AZURE_CLIENT_SECRET') == 'DeviceCodeAuth':
+            logger.info("Using device authentication auth!")
+            credential = DeviceCodeCredential()
+        else:
+            credential = DefaultAzureCredential()
+        
         self._token = credential.get_token('https://graph.microsoft.com/.default')
         self._header = {"Authorization": f"Bearer {self._token.token}"}
         self._base_url = "https://graph.microsoft.com/"

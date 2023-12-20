@@ -99,9 +99,14 @@ Auth uses `azure-identity` python package which offsers [variety of authenticati
     - If you see may see `jwt ... token` related errors, this usually can be fixed by cleaning login cache `az cache purge`
 
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python#environment-variables):
-  - `AZURE_CLIENT_ID` - ID of a Microsoft Entra application
   - `AZURE_TENANT_ID` - ID of the application's Microsoft Entra tenant
+  - `AZURE_CLIENT_ID` - ID of a Microsoft Entra application
   - `AZURE_CLIENT_SECRET` - one of the application's client secrets
+
+- **DeviceCodeAuth**, allows using interactive [device code authentication](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.devicecodecredential?view=azure-python). Set following variables:
+  - `AZURE_TENANT_ID` - ID of the application's Microsoft Entra tenant
+  - `AZURE_CLIENT_ID` is set to literal string `DeviceCodeAuth`
+  - `AZURE_CLIENT_SECRET` is set to literal string `DeviceCodeAuth`
 
 The Environment variables take precedence over the Azure CLI auth.
 
