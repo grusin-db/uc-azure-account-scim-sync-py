@@ -127,9 +127,12 @@ Auth uses `databricks-sdk` python package which offers [variety of authenticatio
 - **Environment** allowing authentication of service principals via environment variables. Auth method mainly used in devops. Set following [variables](https://github.com/databricks/databricks-sdk-py#azure-native-authentication):
   - `DATABRICKS_ACCOUNT_ID` - see azure cli section
   - `DATABRICKS_HOST` - see azure cli section
-  - `ARM_TENANT_ID` - ID of the application's Microsoft Entra tenant
-  - `ARM_CLIENT_ID` - ID of a Microsoft Entra application
-  - `ARM_CLIENT_SECRET` - one of the application's client secrets
+  - SPN auth:
+    - `ARM_TENANT_ID` - ID of the application's Microsoft Entra tenant
+    - `ARM_CLIENT_ID` - ID of a Microsoft Entra application
+    - `ARM_CLIENT_SECRET` - one of the application's client secrets
+  - SCIM Token auth:
+    - `DATABRICKS_TOKEN` - SCIM Token generated from "Account Console" -> "Settings" -> "User provisioning" page.
 
 The Environment variables take precedence over the Azure CLI auth.
 
