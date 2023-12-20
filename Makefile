@@ -7,7 +7,7 @@ install:
 	pip install .
 
 uninstall:
-	pip uninstall azure_dbr_scim_sync
+	pip uninstall -y azure_dbr_scim_sync
 
 fmt:
 	yapf -pri azure_dbr_scim_sync tests setup.py

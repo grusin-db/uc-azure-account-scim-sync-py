@@ -196,16 +196,17 @@ def _generic_create_or_update(mapper, desired: T, actual: T, compare_fields: Lis
     mapper['key_api_field']
 
     desired = deepcopy(desired)
-    desired_dict = desired.as_dict()
+    desired_dict = deepcopy(desired.as_dict())
 
     if not actual:
         created = None
 
         logger.info(f"[{dry_run=}] creating: {desired}")
         if not dry_run:
-            d = desired.__dict__
+            d = deepcopy(desired.__dict__)
 
-            # dont create members, they might not be yet existing
+            # dont create members, we do not know their dbr ids at this phase
+            # TODO: maybe there is a better way to handle it?
             if isinstance(desired, iam.Group):
                 d['members'] = []
 
