@@ -428,7 +428,7 @@ def sync(*,
          users: Iterable[iam.User],
          groups: Iterable[iam.Group],
          service_principals: Iterable[iam.ServicePrincipal],
-         deep_sync_group_external_ids: Iterable[str],
+         deep_sync_group_names: Iterable[str],
          dry_run_security_principals=False,
          dry_run_members=False,
          worker_threads: int = 10):
@@ -473,8 +473,20 @@ def sync(*,
         for u in itertools.chain(result.users, result.groups, result.service_principals)
     }
 
-    # FIXME: is there possibility that this would ever fail?
     assert len(graph_to_dbr_ids) == len(dbr_to_graph_ids)
+
+    # deep sync group names
+    group_name_to_external_ids = {
+        u.desired.display_name: u.external_id
+        for u in result.groups
+    }
+
+    deep_sync_group_external_ids = set(
+        group_name_to_external_ids[u]
+        for u in deep_sync_group_names
+    )
+    assert len(deep_sync_group_names) == len(deep_sync_group_external_ids)
+
 
     # check which group members to add or remove
     for group_merge_result in result.groups:

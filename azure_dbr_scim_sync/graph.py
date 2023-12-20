@@ -55,7 +55,7 @@ class GraphSyncObject(BaseModel):
     service_principals: Optional[Dict[str, GraphServicePrincipal]] = Field(default_factory=lambda: {})
     groups: Optional[Dict[str, GraphGroup]] = Field(default_factory=lambda: {})
     errors: Optional[List] = Field(default_factory=lambda: [])
-    deep_sync_groups: Optional[Dict[str, Dict]] = Field(default_factory=lambda: {})
+    deep_sync_group_names: Optional[List[str]] = Field(default_factory=lambda: [])
 
     def save_to_json_file(self, file_name: str):
         logger.info(f"Saving GraphSyncObject to {file_name}")
@@ -174,6 +174,8 @@ class GraphAPIClient:
                     raise e
 
             return sync_data.groups[id]
+        
+        deep_sync_groups_xref: Dict[str, Dict] = {}
 
         # get all groups for deep sync (incl. members)
         for idx, group_name in enumerate(group_names):
@@ -183,14 +185,14 @@ class GraphAPIClient:
                 logger.warning(f"Group not found, skipping: {group_name}")
                 continue
 
-            sync_data.deep_sync_groups[group_info['id']] = group_info
+            deep_sync_groups_xref[group_info['id']] = group_info
 
         # get actual members
-        for idx, group_id in enumerate(sync_data.deep_sync_groups):
-            group_info = sync_data.deep_sync_groups[group_id]
+        for idx, group_id in enumerate(deep_sync_groups_xref):
+            group_info = deep_sync_groups_xref[group_id]
             group_name = group_info["displayName"]
             logger.info(
-                f"Downloading members of group: {group_name} ({idx+1}/{len(sync_data.deep_sync_groups)})")
+                f"Downloading members of group: {group_name} ({idx+1}/{len(deep_sync_groups_xref)})")
 
             group_members = self.get_group_members(group_info['id'])
 
@@ -216,10 +218,19 @@ class GraphAPIClient:
                 else:
                     group.members[r.id] = r
         msg = f"Downloaded: errors={len(sync_data.errors)}, groups={len(sync_data.groups)}, users={len(sync_data.users)}, service_principals={len(sync_data.service_principals)}"
+        
         if sync_data.errors:
             logger.error(msg)
             raise ValueError(msg)
         else:
             logger.info(msg)
 
+        sync_data.deep_sync_group_names = sorted(list({ 
+            v['displayName']
+            for _, v in deep_sync_groups_xref.items()
+        }))
+
+        logger.debug(f"Effective deep sync group names: {sync_data.deep_sync_group_names}")
+
         return sync_data
+
