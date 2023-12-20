@@ -417,6 +417,11 @@ def create_or_update_service_principals(client: AccountClient,
 # Sync
 #
 
+# https://stackoverflow.com/questions/312443/how-do-i-split-a-list-into-equally-sized-chunks/22045226#22045226
+def _chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield list(lst[i:i + n])
 
 def sync(*,
          account_client: AccountClient,
@@ -515,11 +520,13 @@ def sync(*,
         # https://api-docs.databricks.com/rest/latest/account-scim-api.html
         patch_operations = []
         if to_add_member_dbr_ids:
-            patch_operations.append(
-                iam.Patch(op=iam.PatchOp.ADD,
-                          value={'members': [{
-                              'value': x
-                          } for x in to_add_member_dbr_ids]}))
+            add_chunks = list(_chunks(list(to_add_member_dbr_ids), 50))
+            for ac in add_chunks:
+                patch_operations.append(
+                    iam.Patch(op=iam.PatchOp.ADD,
+                            value={'members': [{
+                                'value': x
+                            } for x in ac]}))
 
         if to_delete_member_dbr_ids:
             patch_operations.extend([
@@ -533,9 +540,11 @@ def sync(*,
             group_merge_result.changes.extend(patch_operations)
 
             if not dry_run_members:
-                account_client.groups.patch(
-                    id=group_merge_result.id,
-                    operations=patch_operations,
-                    schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP])
+                patch_chunks = list(_chunks(patch_operations, 50))
+                for pc in patch_chunks:
+                    account_client.groups.patch(
+                        id=group_merge_result.id,
+                        operations=pc,
+                        schemas=[iam.PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP])
 
     return result
