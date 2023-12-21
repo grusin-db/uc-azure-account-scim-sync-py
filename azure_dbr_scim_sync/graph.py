@@ -17,6 +17,7 @@ logger = logging.getLogger('sync.graph')
 class GraphBase(BaseModel):
     id: str
     display_name: str = Field(validation_alias=AliasChoices('displayName'))
+    extra_data: Dict[str, str] = Field(default_factory=lambda: {})
 
 
 class GraphUser(GraphBase):
@@ -224,6 +225,7 @@ class GraphAPIClient:
                         sync_data.errors.append((m, r))
                     else:
                         group.members[r.id] = r
+                        r.extra_data["search_depth"] = depth+1
 
         
         

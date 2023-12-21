@@ -12,6 +12,22 @@ Yes, that means that group in a group, a.k.a. **nested groups are supported**!
 
 When doing synchronization no users, service principals or groups are ever deleted. Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones. Group members are fully sychronized to match what is present in AAD. Optionally deep group search is possible.
 
+## Nested groups search
+
+It is possible to deep search group members for additional groups to sync by adjusting `--group-search-depth` parameter.
+
+Default value of 1 means that only groups defined in the input file would be synced, value of `2` would mean that child groups of these groups would be searched and synced as well. 
+
+For example, seaching groups `TEAM_ALPHA`, `TEAM_EPSILON`, `TEAM_ZETA` with `--group-search-depth` set to `2` will result in follwing result:
+
+![image](docs/group_graph.png)
+
+Observe that directly searched groups will always have `search depth` equal to `1`, only the child group member `kevin@company.com` is being found because of the deep/recursive search over group `TEAM_ETA`
+
+There is no hard depth limit, but **caution** has to be excercised when using this paramater, because too deep search can cause too many groups to be discovered and in effect platform limits will be hit. 
+
+It it advised to first run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups dicovered during the deep search. And only continue with sync if results are bellow allowed maximum amount og groups SCIM endpoint supports!
+
 ## Running Sync
 
 Synchronization is based on a list of groups that you would like to sync. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take few minutes.
@@ -23,7 +39,6 @@ Normally there are two usecases/patterns I have observed:
 
 The interface to faciciliate these two usecases is the same, the only difference is the list of groups, and time needed to perform the sync.
 
-It is possible to deep search group members for additional groups to sync by adjusting `--group-search-depth`. Default value of 1 means that only groups defined in the input file would be synced, value of `2` would mean that child groups of these groups would be searched and synced as well. There is no hard depth limit, but **caution** has to be excercised when using this paramater, because too deep search can cause too many groups to be discovered and in effect platform limits will be hit. It it advised to run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups dicovered during the deep search.
 
 To run the sync follow these steps:
 
