@@ -296,10 +296,10 @@ account_client.groups.list()
 # pushes objects to SCIM
 sync_results = sync(
     account_client=account_client,
-    users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
-    groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
-    service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
-    deep_sync_group_names=list(stuff_to_sync.deep_sync_group_names),
+    users=[x.to_sdk_user() for x in data.users.values()],
+    groups=[x.to_sdk_group() for x in data.groups.values()],
+    service_principals=[x.to_sdk_service_principal() for x in data.service_principals.values()],
+    deep_sync_group_names=list(data.deep_sync_group_names),
     dry_run_security_principals=False,
     dry_run_members=False,
     worker_threads=10)
