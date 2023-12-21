@@ -16,17 +16,16 @@ When doing synchronization no users, service principals or groups are ever delet
 
 It is possible to deep search group members for additional groups to sync by adjusting `--group-search-depth` parameter.
 
-Default value of 1 means that only groups defined in the input file would be synced, value of `2` would mean that child groups of these groups would be searched and synced as well. 
+Default value of `1` means that only groups defined in the input file would be synced, value of `2` would mean that child groups of these groups would be searched and synced as well.
 
-For example, seaching groups `TEAM_ALPHA`, `TEAM_EPSILON`, `TEAM_ZETA` with `--group-search-depth` set to `2` will result in follwing result:
+For example, searching groups `TEAM_ALPHA`, `TEAM_EPSILON`, `TEAM_ZETA` with `--group-search-depth` set to `2` will result in following result:
 
 ![image](docs/group_graph.png)
-
 Observe that directly searched groups will always have `search depth` equal to `1`, only the child group member `kevin@company.com` is being found because of the deep/recursive search over group `TEAM_ETA`
 
-There is no hard depth limit, but **caution** has to be excercised when using this paramater, because too deep search can cause too many groups to be discovered and in effect platform limits will be hit. 
+There is no hard depth limit, but **caution** has to be exercised when using this parameter, because too deep search can cause too many groups to be discovered and in effect platform limits will be hit.
 
-It it advised to first run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups dicovered during the deep search. And only continue with sync if results are bellow allowed maximum amount og groups SCIM endpoint supports!
+It it advised to first run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups discovered during the deep search. And only continue with sync if results are below the maximum number of groups SCIM endpoint supports!
 
 ## Running Sync
 
