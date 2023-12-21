@@ -192,6 +192,123 @@ Currently package for this code is not being distributed, you need to build it y
 - if you are in `.venv`, you should be able to run `azure_dbr_scim_sync --help`
 - if you are not in `.venv` follow on screen instructions regarding placement of the CLI command
 
+## Running directly from databricks notebook
+
+It is possible to run the sync code directly from databricks notebook, in order to do so, please either:
+
+- install the wheel file on a cluster / session scope notebook
+- use [files in repos](https://www.databricks.com/blog/2021/10/07/databricks-repos-is-now-generally-available.html) or [workspace files](https://docs.databricks.com/en/delta-live-tables/import-workspace-files.html) functionality to `import azure_dbr_scim_sync`
+
+Ensure that notebook dependencies are installed
+```python
+%pip install pydantic==2.3.0 pyyaml==6.0.1 databricks-sdk==0.9.0 requests click==8.1.7 coloredlogs==15.0.1 joblib fsspec==2023.9.2 adlfs==2023.9.0 azure-identity==1.15.0 ipydagred3 networkx
+dbutils.library.restartPython()
+```
+
+### Enable logging when running from notebook
+```python
+import logging
+import sys
+import os
+import coloredlogs
+
+# debug and verbose can be very chatty
+# dial down to verbose=True (or False)
+# debug=False to more readable output
+verbose = False
+debug = False
+
+logging.basicConfig(stream=sys.stdout,
+                        level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
+logger = logging.getLogger('sync')
+
+# colored logs sets all loggers to this level
+coloredlogs.install(level=logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
+logging.getLogger('py4j').setLevel(logging.ERROR)
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+    logging.DEBUG if debug else logging.WARNING)
+
+if verbose:
+    logger.setLevel(logging.DEBUG)
+```
+
+### Query graph api from notebook
+
+```python
+from azure_dbr_scim_sync.graph import GraphAPIClient
+
+# force using device auth code
+os.environ.setdefault('AZURE_CLIENT_ID', 'DeviceCodeAuth')
+os.environ.setdefault('AZURE_CLIENT_SECRET', 'DeviceCodeAuth')
+
+# mind that you will be asked for device login each time you run this
+# hence for repeated runs split this command into two
+graph_client = GraphAPIClient()
+
+# split here :)
+aad_groups = [ "TEAM_ALPHA", "TEAM_EPSILON", "TEAM_ZETA" ]
+
+# you can use graph_client at will now
+# use graph_client._session to make vanilla http requests
+data = graph_client.get_objects_for_sync(aad_groups, 2)
+data
+```
+
+### Display graph api results in nice graph like notebook visualization
+
+```python
+import ipydagred3
+G = ipydagred3.Graph(directed=True)
+
+for _, u in data.users.items():
+  G.setNode(u.id, label=u.mail, style="fill: #0080FF")
+
+for _, g in data.groups.items():
+  G.setNode(g.id, label=g.display_nam], style="fill: #00CC66")
+
+for _, s in data.service_principals.items():
+  G.setNode(s.id, label=s.display_name, style="fill: #FF99FF")
+
+for _, g in data.groups.items():
+  for _, m in g.members.items():
+    G.setEdge(g.id, m.id, label=f"search depth: {m.extra_data['search_depth']}")
+
+widget = ipydagred3.DagreD3Widget(graph=G)
+widget
+```
+
+### Run SCIM sync into databricks from notebook
+
+```python
+from azure_dbr_scim_sync.scim import get_account_client
+
+os.environ.setdefault('DATABRICKS_ACCOUNT_ID', '...')
+os.environ.setdefault('DATABRICKS_HOST', 'https://accounts.azuredatabricks.net')
+os.environ.setdefault('DATABRICKS_TOKEN', 'dsapi...')
+
+account_client = get_account_client()
+
+# test connectivity
+account_client.groups.list()
+
+# pushes objects to SCIM
+sync_results = sync(
+    account_client=account_client,
+    users=[x.to_sdk_user() for x in stuff_to_sync.users.values()],
+    groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
+    service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
+    deep_sync_group_names=list(stuff_to_sync.deep_sync_group_names),
+    dry_run_security_principals=False,
+    dry_run_members=False,
+    worker_threads=10)
+
+# show sync results
+# you may want to save it into delta table for analytical purposes!
+sync_results
+```
+
 ## Limitations
 
 - Inactive AAD Users and Service Principals are only inactivated in Databricks Account when they are being synced, as in being member of the group that is being synced. For example, if dis-activated user gets also removed from the groups, then this user wont be taking part of sync anymore, and due to this this user wont be deactivated in Databricks Account.
@@ -199,7 +316,7 @@ Currently package for this code is not being distributed, you need to build it y
 
 ## Near time roadmap
 
-- enable incremental pgraph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
+- enable incremental graph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
 - enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
 - enable ability to run directly from databricks workflows, with simple installer
 
