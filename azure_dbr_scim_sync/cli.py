@@ -5,8 +5,9 @@ import sys
 import click
 import coloredlogs
 
-from azure_dbr_scim_sync.graph import GraphAPIClient
-from azure_dbr_scim_sync.scim import get_account_client, sync
+from .graph import GraphAPIClient
+from .scim import get_account_client, sync
+from .persisted_cache import Cache
 
 
 @click.command()
@@ -31,7 +32,8 @@ from azure_dbr_scim_sync.scim import get_account_client, sync
 @click.option('--save-graph-response-json', required=False, help="saves graph response into json file")
 @click.option('--query-graph-only', required=False, is_flag=True, default=False, show_default=True, help="only downloads information from graph (does not perform SCIM sync)")
 @click.option('--group-search-depth', default=1, show_default=True, help="defines nested group recursion search depth, default is to search only groups provided as input")
-def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads, save_graph_response_json, query_graph_only, group_search_depth):
+@click.option('--incremental', default=True, is_flag=True, help="uses graph api change feed to obtain list of AAD groups that changed since last run")
+def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads, save_graph_response_json, query_graph_only, group_search_depth, incremental):
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -54,7 +56,15 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         aad_groups = json.load(f)
 
     logger.info(f"Loaded {len(aad_groups)} groups from {groups_json_file}")
-    stuff_to_sync = graph_client.get_objects_for_sync(aad_groups, group_search_depth=group_search_depth)
+
+    if not incremental:
+        logger.info("Entering full graph query mode...")
+        stuff_to_sync = graph_client.get_objects_for_sync(group_names=aad_groups, group_search_depth=group_search_depth)
+    else:
+        logger.info("Entering incremental graph query mode...")
+        incremental_token_cache = Cache(path="graph_incremental_token.json")
+        delta_link = incremental_token_cache.get('delta_link')
+        delta_link, stuff_to_sync = graph_client.get_objects_for_sync_incremental(delta_link=delta_link, group_names=aad_groups, group_search_depth=group_search_depth)
 
     if save_graph_response_json:
         stuff_to_sync.save_to_json_file(save_graph_response_json)
@@ -73,8 +83,12 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         dry_run_members=dry_run_members,
         worker_threads=worker_threads)
 
-    logger.info("Sync finished!")
+    if incremental:
+        logger.info("Saving graph delta token...")
+        incremental_token_cache['delta_link'] = delta_link
+        incremental_token_cache.flush()
 
+    logger.info("Sync finished!")
 
 if __name__ == '__main__':
     sync_cli()

@@ -136,10 +136,10 @@ class GraphAPIClient:
 
         return members
     
-    def get_objects_for_sync_incremental(self, delta_link: str):
+    def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int):
         # take list of all groups from cache
         cached_group_names = list(Cache(path='cache_group.json').keys())
-        group_names: Set[str] = set()
+        group_names: Set[str] = set(group_names) or set()
         if not cached_group_names:
             raise ValueError("No whitelisted groups to sync found. Run full sync before running incremental sync in order to build list of whitelisted groups")
         
@@ -150,7 +150,7 @@ class GraphAPIClient:
             group_names.update(cached_group_names)
             query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName"
         else:
-            logger.info(f"Incremental mode: delta token: {..{delta_link[-16:]}")
+            logger.info(f"Incremental mode: delta token: d..{delta_link[-16:]}")
             query = delta_link
 
         while query:
@@ -171,7 +171,7 @@ class GraphAPIClient:
                     logger.info(f"Incremental mode: group change: {name}")
                     group_names.add(name)
 
-        sync_obj = self.get_objects_for_sync(group_names)
+        sync_obj = self.get_objects_for_sync(group_names=group_names, group_search_depth=group_search_depth)
         return delta_link, sync_obj
 
     def get_objects_for_sync(self, group_names, group_search_depth: int=1):
