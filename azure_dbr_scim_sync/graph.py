@@ -10,6 +10,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from copy import deepcopy
+from .persisted_cache import Cache
 
 logger = logging.getLogger('sync.graph')
 
@@ -134,6 +135,44 @@ class GraphAPIClient:
                 members.extend(value)
 
         return members
+    
+    def get_objects_for_sync_incremental(self, delta_link: str):
+        # take list of all groups from cache
+        cached_group_names = list(Cache(path='cache_group.json').keys())
+        group_names: Set[str] = set()
+        if not cached_group_names:
+            raise ValueError("No whitelisted groups to sync found. Run full sync before running incremental sync in order to build list of whitelisted groups")
+        
+        logger.info(f"Found {len(cached_group_names)} whitelisted group(s) for incremental sync")
+
+        if not delta_link:
+            logger.warning("Incremental mode: initial run detected: downloading all whitelisted groups")
+            group_names.update(cached_group_names)
+            query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName"
+        else:
+            logger.info(f"Incremental mode: delta token: {..{delta_link[-16:]}")
+            query = delta_link
+
+        while query:
+            r = self._session.get(query, headers=self._header)
+            r.raise_for_status()
+            j = r.json()
+            next_link = j.get('@odata.nextLink')
+            delta_link = j.get('@odata.deltaLink')
+            
+            query = next_link
+
+            if not next_link and not delta_link:
+                raise RuntimeError("delta_link is empty")
+
+            for g in j.get('value', []):
+                name = g.get('displayName')
+                if name and (name not in group_names) and (name in cached_group_names):
+                    logger.info(f"Incremental mode: group change: {name}")
+                    group_names.add(name)
+
+        sync_obj = self.get_objects_for_sync(group_names)
+        return delta_link, sync_obj
 
     def get_objects_for_sync(self, group_names, group_search_depth: int=1):
         sync_data = GraphSyncObject()
@@ -245,4 +284,3 @@ class GraphAPIClient:
         logger.debug(f"Effective deep sync group names: {sync_data.deep_sync_group_names}")
 
         return sync_data
-
