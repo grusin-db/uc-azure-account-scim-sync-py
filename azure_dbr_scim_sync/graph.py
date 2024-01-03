@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any
 import json
 import os
 
@@ -18,7 +18,7 @@ logger = logging.getLogger('sync.graph')
 class GraphBase(BaseModel):
     id: str
     display_name: str = Field(validation_alias=AliasChoices('displayName'))
-    extra_data: Dict[str, str] = Field(default_factory=lambda: {})
+    extra_data: Dict[str, Any] = Field(default_factory=lambda: {})
 
 
 class GraphUser(GraphBase):
@@ -176,6 +176,7 @@ class GraphAPIClient:
 
     def get_objects_for_sync(self, group_names, group_search_depth: int=1):
         sync_data = GraphSyncObject()
+        group_search_depth = int(group_search_depth)
 
         def _register_user(d):
             id = d['id']

@@ -1,5 +1,6 @@
 #code
 cache_*.json
+graph_incremental_token.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
