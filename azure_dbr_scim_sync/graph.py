@@ -138,19 +138,21 @@ class GraphAPIClient:
     
     def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int):
         # take list of all groups from cache
-        cached_group_names = list(Cache(path='cache_group.json').keys())
-        group_names: Set[str] = set(group_names) or set()
+        # append any extra groups provided, this is needed in case these groups are not in cache yet
+        cached_group_names = set(Cache(path='cache_group.json').keys()).union(set(group_names))
         if not cached_group_names:
-            raise ValueError("No whitelisted groups to sync found. Run full sync before running incremental sync in order to build list of whitelisted groups")
+            raise ValueError("No whitelisted groups to sync defined.")
         
         logger.info(f"Found {len(cached_group_names)} whitelisted group(s) for incremental sync")
 
+        to_sync_groups: Set[str] = set()
+
         if not delta_link:
             logger.warning("Incremental mode: initial run detected: downloading all whitelisted groups")
-            group_names.update(cached_group_names)
+            to_sync_groups.update(cached_group_names)
             query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName"
         else:
-            logger.info(f"Incremental mode: delta token: d..{delta_link[-16:]}")
+            logger.info(f"Incremental mode: delta token: ..{delta_link[-32:]}")
             query = delta_link
 
         while query:
@@ -167,11 +169,11 @@ class GraphAPIClient:
 
             for g in j.get('value', []):
                 name = g.get('displayName')
-                if name and (name not in group_names) and (name in cached_group_names):
+                if name and (name not in to_sync_groups) and (name in cached_group_names):
                     logger.info(f"Incremental mode: group change: {name}")
-                    group_names.add(name)
+                    to_sync_groups.add(name)
 
-        sync_obj = self.get_objects_for_sync(group_names=group_names, group_search_depth=group_search_depth)
+        sync_obj = self.get_objects_for_sync(group_names=to_sync_groups, group_search_depth=group_search_depth)
         return delta_link, sync_obj
 
     def get_objects_for_sync(self, group_names, group_search_depth: int=1):

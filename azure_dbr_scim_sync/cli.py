@@ -32,8 +32,8 @@ from .persisted_cache import Cache
 @click.option('--save-graph-response-json', required=False, help="saves graph response into json file")
 @click.option('--query-graph-only', required=False, is_flag=True, default=False, show_default=True, help="only downloads information from graph (does not perform SCIM sync)")
 @click.option('--group-search-depth', default=1, show_default=True, help="defines nested group recursion search depth, default is to search only groups provided as input")
-@click.option('--incremental', default=True, is_flag=True, help="uses graph api change feed to obtain list of AAD groups that changed since last run")
-def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads, save_graph_response_json, query_graph_only, group_search_depth, incremental):
+@click.option('--full-sync', default=False, is_flag=True, show_default=True, help="synchronizes all groups defined in `groups-json-file` instead of using graph api change feed")
+def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads, save_graph_response_json, query_graph_only, group_search_depth, full_sync):
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -57,7 +57,7 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
 
     logger.info(f"Loaded {len(aad_groups)} groups from {groups_json_file}")
 
-    if not incremental:
+    if full_sync:
         logger.info("Entering full graph query mode...")
         stuff_to_sync = graph_client.get_objects_for_sync(group_names=aad_groups, group_search_depth=group_search_depth)
     else:
@@ -83,8 +83,8 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         dry_run_members=dry_run_members,
         worker_threads=worker_threads)
 
-    if incremental:
-        logger.info("Saving graph delta token...")
+    if not full_sync:
+        logger.info(f"Saving graph delta token: ..{delta_link[-32:]}")
         incremental_token_cache['delta_link'] = delta_link
         incremental_token_cache.flush()
 
