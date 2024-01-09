@@ -139,7 +139,11 @@ class GraphAPIClient:
 
         return members
 
-    def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int=1, graph_change_feed_grace_time: int=30):
+    def get_objects_for_sync_incremental(self,
+                                         delta_link: str,
+                                         group_names,
+                                         group_search_depth: int = 1,
+                                         graph_change_feed_grace_time: int = 30):
         cached_group_names = set(Cache(path='cache_group.json').keys())
         group_names = set(group_names or [])
         new_group_names = group_names.difference(cached_group_names)

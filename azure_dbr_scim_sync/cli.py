@@ -57,7 +57,8 @@ from .scim import get_account_client, sync
     show_default=True,
     help="synchronizes all groups defined in `groups-json-file` instead of using graph api change feed")
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads,
-             save_graph_response_json, query_graph_only, group_search_depth, full_sync, graph_change_feed_grace_time):
+             save_graph_response_json, query_graph_only, group_search_depth, full_sync,
+             graph_change_feed_grace_time):
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -88,7 +89,7 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         logger.info("Entering full graph query mode...")
         if not aad_groups:
             raise ValueError("no groups provided")
-        
+
         stuff_to_sync = graph_client.get_objects_for_sync(group_names=aad_groups,
                                                           group_search_depth=group_search_depth)
     else:
@@ -96,7 +97,10 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         incremental_token_cache = Cache(path="graph_incremental_token.json")
         delta_link = incremental_token_cache.get('delta_link')
         delta_link, stuff_to_sync = graph_client.get_objects_for_sync_incremental(
-            delta_link=delta_link, group_names=aad_groups, group_search_depth=group_search_depth, graph_change_feed_grace_time=graph_change_feed_grace_time)
+            delta_link=delta_link,
+            group_names=aad_groups,
+            group_search_depth=group_search_depth,
+            graph_change_feed_grace_time=graph_change_feed_grace_time)
 
     if save_graph_response_json:
         stuff_to_sync.save_to_json_file(save_graph_response_json)
