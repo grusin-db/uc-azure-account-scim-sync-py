@@ -36,7 +36,7 @@ It it advised to first run `--query-graph-only` and `--save-graph-response-json 
 
 ## Incremental synchronization (default)
 
-Uses [Graph API change feed](https://learn.microsoft.com/en-us/graph/api/group-delta?view=graph-rest-1.0&tabs=http#query-parameters) to determine the groups that have changed since last run. In this mode, all previously synchronized groups will be checked for changes. That means that groups that changed in AAD/Entra, but never were requested to be synced will be ignored.
+Uses [Graph API change feed](https://learn.microsoft.com/en-us/graph/api/resources/change-notifications-api-overview?view=graph-rest-1.0) to determine the [groups that have changed](https://learn.microsoft.com/en-us/graph/api/group-delta?view=graph-rest-1.0&tabs=http#query-parameters) since last run. In this mode, all previously synchronized groups will be checked for changes. That means that groups that changed in AAD/Entra, but never were requested to be synced will be ignored.
 
 In scenario where incremental sync is ran for specific group(s) for the first time, the full synchronization of specific groups(s) is automatically performed in order to capture all the memembers of a group.
 
