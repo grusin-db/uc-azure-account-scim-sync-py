@@ -50,7 +50,7 @@ To run the incremental sync follow these steps:
   - (optionally) add `--groups-json-file groups_to_sync.json` to use the file with groups, consequtive runs don't need this file anymore.
 - To get more information about the process add:
   - `--verbose` (display groups to be synced, new grups for full sync, also logs information also about identities that did not change, by default only changes are logged)
-  - or `--debugg` (very detail, incl. api calls)
+  - or `--debug` (very detail, incl. api calls)
 - Follow the prompts on the screen with regards to how to proceed with the [dry run](#dry-run-sync) levels.
   - If suggested list of changes look like what you would expect run without proposed `--dry-run-...` parameter(s)
 - Repeat the steps again, but on bigger list of groups by adding more groups to `groups_to_sync.json` and run the process with `--groups-json-file` parameter.
