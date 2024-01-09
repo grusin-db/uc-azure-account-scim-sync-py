@@ -49,7 +49,7 @@ To run the incremental sync follow these steps:
 - Run sync with dry run first: `azure_dbr_scim_sync --dry-run-security-principals --dry-run-members --full-sync`.
   - (optionally) add `--groups-json-file groups_to_sync.json` to use the file with groups, consequtive runs don't need this file anymore.
 - To get more information about the process add:
-  - `--verbose` (logs information also about identities that did not change, by default only changes are logged) 
+  - `--verbose` (display groups to be synced, new grups for full sync, also logs information also about identities that did not change, by default only changes are logged)
   - or `--debugg` (very detail, incl. api calls)
 - Follow the prompts on the screen with regards to how to proceed with the [dry run](#dry-run-sync) levels.
   - If suggested list of changes look like what you would expect run without proposed `--dry-run-...` parameter(s)
@@ -91,8 +91,8 @@ $ ✗ azure_dbr_scim_sync --help
 Usage: azure_dbr_scim_sync [OPTIONS]
 
 Options:
-  --groups-json-file TEXT         list of AAD groups to sync (json formatted)
-                                  [required]
+  --groups-json-file TEXT         list of AAD groups to add to sync (json
+                                  formatted)
   --verbose                       verbose information about changes
   --debug                         more verbose, shows API calls
   --dry-run-security-principals   dont make any changes to users, groups or
@@ -109,6 +109,9 @@ Options:
   --group-search-depth INTEGER    defines nested group recursion search depth,
                                   default is to search only groups provided as
                                   input  [default: 1]
+  --full-sync                     synchronizes all groups defined in `groups-
+                                  json-file` instead of using graph api change
+                                  feed
   --help                          Show this message and exit.
 ```
 

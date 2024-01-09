@@ -11,7 +11,7 @@ from .scim import get_account_client, sync
 
 
 @click.command()
-@click.option('--groups-json-file', help="list of AAD groups to sync (json formatted)", required=False)
+@click.option('--groups-json-file', help="list of AAD groups to add to sync (json formatted)", required=False)
 @click.option('--verbose',
               default=False,
               is_flag=True,
