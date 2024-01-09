@@ -114,11 +114,14 @@ Options:
   --group-search-depth INTEGER    defines nested group recursion search depth,
                                   default is to search only groups provided as
                                   input  [default: 1]
+  --graph-change-feed-grace-time INTEGER
+                                  time in seconds to wait before checking
+                                  membership of groups detected in incremental
+                                  mode  [default: 30]
   --full-sync                     synchronizes all groups defined in `groups-
                                   json-file` instead of using graph api change
                                   feed
   --help                          Show this message and exit.
-```
 
 ### Dry run sync
 
