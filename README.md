@@ -8,9 +8,16 @@ This python based application supports synchronization of:
 - Service Principals
 - Groups and their members
 
-Yes, that means that group in a group, a.k.a. **nested groups are supported**!
+Group members can be any of the above, and yes, that means that group in a group, a.k.a. **nested groups are supported**!
 
-When doing synchronization no users, service principals or groups are ever deleted. Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones. Group members are fully sychronized to match what is present in AAD. Optionally deep group search is possible.
+Synchronization principles:
+
+- When doing synchronization no security principals (users, service principals or groups) are ever deleted.
+- Synchronization only adds new security principals, or updates their attributes (like display name, or active flag) of already existing ones.
+- Group members are fully sychronized to match what is present in AAD. Any new groups members are automatically added to databricks account.
+- Optionally deep group search is possible to extend the list of synced groups by doing recursive searches.
+- By default incremental/change feed is used, hence only AAD/Entra groups that have changed since last runare being synced to Databricks! This reduces reduces synchronization time dramatically.
+- When incremental is used for a first time, the full sync is performed, consequitve runs will be just incrementals.
 
 ## Nested groups search
 
@@ -27,29 +34,55 @@ There is no hard depth limit, but **caution** has to be exercised when using thi
 
 It it advised to first run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups discovered during the deep search. And only continue with sync if results are below the maximum number of groups SCIM endpoint supports!
 
-## Running Sync
+## Incremental synchronization (default)
 
-Synchronization is based on a list of groups that you would like to sync. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take few minutes.
+Uses Graph API change feed to determine the groups that have changed since last run. In this mode, all previously synchronized groups will be checked for changes. That means that groups that changed in AAD/Entra, but never were requested to be synced will be ignored.
 
-Normally there are two usecases/patterns I have observed:
+In scenario where incremental sync is ran for specific group(s) for the first time, the full synchronization of specific groups(s) is automatically performed in order to capture all the memembers of a group.
 
-- Selective sync of newly to be onboarded groups, usually of adhoc nature, always needed when onboarding a new team to Unity Catalog. Normally you would like to sync all team groups and their members before running the onboarding process. This way that all the access could be set by your CI/CD automation (looking at you here [databricks terraform provider](https://registry.terraform.io/providers/databricks/databricks/latest/docs)). Without doing this step automation would most likely fail because the groups or other identities would not be yet presentin databricks account.
-- Full sync, running on a schedule very few hours, that will be synchronizing all already onboarded teams and their groups.
+Hence this default mode is handing both situation where initial sync needs to be done, or consequtive groups changes needs to be synced.
 
-The interface to faciciliate these two usecases is the same, the only difference is the list of groups, and time needed to perform the sync.
-
-
-To run the sync follow these steps:
+To run the incremental sync follow these steps:
 
 - Authenticate: [Authentication steps described in section below](#authentication)
-- Create `json` file containing the list of AAD groups names you would like to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`). Normally for the first run you should chose few groups only, it will make experience better.
-- Run sync with dry run first: `azure_dbr_scim_sync --groups-json-file groups_to_sync.json --dry-run-security-principals --dry-run-members`.
+- (Optionally) For the first run, create `json` file containing the list of AAD groups names you would like to add to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`). 
+- Run sync with dry run first: `azure_dbr_scim_sync --dry-run-security-principals --dry-run-members --full-sync`.
+  - (optionally) add `--groups-json-file groups_to_sync.json` to use the file with groups, consequtive runs don't need this file anymore.
 - To get more information about the process add:
   - `--verbose` (logs information also about identities that did not change, by default only changes are logged) 
   - or `--debugg` (very detail, incl. api calls)
 - Follow the prompts on the screen with regards to how to proceed with the [dry run](#dry-run-sync) levels.
   - If suggested list of changes look like what you would expect run without proposed `--dry-run-...` parameter(s)
-- Repeat the steps again, but on bigger list of groups.
+- Repeat the steps again, but on bigger list of groups by adding more groups to `groups_to_sync.json` and run the process with `--groups-json-file` parameter.
+
+Some technical facts:
+
+- Internally all cached groups (contents of `cache_groups.json`) are used to determine the names of groups for syncing.
+- When optional `--groups-json-file <file>` parameter is provided, any new groups defined will be fully synced on a first run. Groups that are already in cache wont have any significance, hence it's allowed to execute command perpectually with the same file, and it will have no effect on consequtive runs.
+- Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full sync.
+
+## Full synchronization (`--full-sync`)
+
+Synchronizes all provided groups in the `--groups-json-file <file>`, without using change feed. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take tens of minutes/hours. Normally there is no good reason to run this sync often.
+
+To run th full sync, follow [Incremental synchronization](#incremental-synchronization-default), and add `--full-sync` patameter to force full syncsynchronization.
+
+## Mixed Sync
+
+It is allowed to switch between incremental and full synchronization modes at will, for example there are two usecases/patterns I have observed:
+
+- Full sync of newly to be onboarded groups, usually of adhoc nature, always needed when onboarding a new team to Unity Catalog. Normally you would like to sync all team groups and their members before running the onboarding process. This way that all the access could be set by your CI/CD automation (looking at you here [databricks terraform provider](https://registry.terraform.io/providers/databricks/databricks/latest/docs)). Without doing this step automation would most likely fail because the groups or other identities would not be yet presentin databricks account.
+- Incremental sync, running on a schedule every few hours/minutes, that will be synchronizing all previously synced groups.
+
+The interface to faciciliate these two usecases is the same, the only difference are:
+
+- full sync required `--full-sync` parameter, while incremental require its absence.
+- the list of groups:
+  - full sync uses the provided groups `--groups-json-file <file>`
+  - while incremental uses list of previously synced groups, if `--groups-json-file <file>` is provided, the new groups will be handled as if they were fully synced
+- trigger:
+  - full sync, due to performance reasons should be in adhoc nature.
+  - incremental sync, due to being fast, should be run on a schedule basis (every 30 minutes or every 1h).
 
 Reference of command line:
 
