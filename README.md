@@ -216,7 +216,7 @@ The Environment variables take precedence over the Azure CLI auth.
 
 (Optional) Only required when running in a VM, this step is not needed when running in Databricks Notebook. When run in a notebook, the cached files will be automatically placed in Workspace files and no extra authentication or setup is needed!
 
-Sync tools uses cache of translation of AAD/Entra object IDs (example: `748fa79a-aaaa-40a5-9597-1b50cbb9a392``) to Databricks Account object IDs (`1236734578586`). This cache is automatically maintained and is self healing, hence it does not have any side effects except allowing scim sync tool to run 10x faster with it, than without.
+Sync tools uses cache of translation of AAD/Entra object IDs (example: `748fa79a-aaaa-40a5-9597-1b50cbb9a392`) to Databricks Account object IDs (`1236734578586`). This cache is automatically maintained and is self healing, hence it does not have any side effects except allowing scim sync tool to run 10x faster with it, than without.
 
 For storing the cache tools needs to have access to a container and optionally a subfolder, where it can write it's cache files.
 
