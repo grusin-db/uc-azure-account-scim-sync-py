@@ -13,7 +13,7 @@ setup(name="azure_dbr_scim_sync",
       packages=find_packages(exclude=["tests", "*tests.*", "*tests"]),
       python_requires=">=3.8",
       install_requires=[
-          "pydantic==2.3.0", "pyyaml==6.0.1", "databricks-sdk==0.9.0", "requests", "click==8.1.7",
+          "pydantic==2.3.0", "pyyaml==6.0.1", "databricks-sdk==0.16.0", "requests", "click==8.1.7",
           "coloredlogs==15.0.1", "joblib", "fsspec==2023.9.2", "adlfs==2023.9.0", "azure-identity==1.15.0"
       ],
       extras_require={
