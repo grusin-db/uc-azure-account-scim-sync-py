@@ -61,6 +61,13 @@ Some technical facts:
 - When optional `--groups-json-file <file>` parameter is provided, any new groups defined will be fully synced on a first run. Groups that are already in cache wont have any significance, hence it's allowed to execute command perpectually with the same file, and it will have no effect on consequtive runs.
 - Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full sync.
 
+Limitations:
+
+- Change data feed desynchronization can happen on Graph API side. It's possible to get information from change feed that groups members have changed, but the API reposponsible for group changes will not see the changes yet. This is rare. To make sure this happens as rare as possible, by default graph membership check logic waits `--graph-change-feed-grace-time 30` (seconds) before making any membership check related API queries.
+- [Users change feed](https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0) is not implemented yet. As a consequence changes to users who are not a part of a group will not be detected. This will yield issues in situations:
+  - When user gets deactived/deleted in AAD/Entra and imediately removed from all the groups. As result sync will just detect that user is not member of any groups anymore, and remove the membership but it will never deactive the account because user is not synced. If user would be kept in one or more groups, then user account would be correctly deactived.
+  - When user would be just deactived without changing membership, it would then be not synced till next time group membership changes due to other user being added/removed, which in turn would cause a group sync, and user account would be deactived correctly.
+
 ## Full synchronization (`--full-sync`)
 
 Synchronizes all provided groups in the `--groups-json-file <file>`, without using change feed. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take tens of minutes/hours.
@@ -70,7 +77,7 @@ To run th full sync, follow [Incremental synchronization](#incremental-synchroni
 Typically there is no good reasons to schedule full sync often, but there are good reasons why it's worth to run full sync daily:
 
 - Incremental sync only captures changes made in AAD/Entra side, due to this any changes to group membership made directly in the Databricks Account won't be detected till next time group changes in AAD/Entra.
-- Change data feed desynchronization can happen on Graph API side. It's possible to get information from change feed that groups members have changed, but the API reposponsible for group changes will not see the changes yet. This is rare. To make sure this happens as rare as possible, by default graph membership check logic waits `--graph-change-feed-grace-time 30` (seconds) before making any membership check related API queries.
+- Limitations of incremental mode (see above)
 
 ## Mixed Sync
 
