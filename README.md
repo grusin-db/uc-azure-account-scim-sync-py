@@ -63,9 +63,14 @@ Some technical facts:
 
 ## Full synchronization (`--full-sync`)
 
-Synchronizes all provided groups in the `--groups-json-file <file>`, without using change feed. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take tens of minutes/hours. Normally there is no good reason to run this sync often.
+Synchronizes all provided groups in the `--groups-json-file <file>`, without using change feed. The list of groups for syncing can vary from one run to other, hence it's possible to just selectively sync few groups at a time, or run sync of all the groups in scope of your application. It goes without saying that sync of 5 groups (and their members) will take few seconds, while syncing of all users, service principals, and groups, can take tens of minutes/hours.
 
 To run th full sync, follow [Incremental synchronization](#incremental-synchronization-default), and add `--full-sync` patameter to force full syncsynchronization.
+
+Typically there is no good reasons to schedule full sync often, but there are good reasons why it's worth to run full sync daily:
+
+- Incremental sync only captures changes made in AAD/Entra side, due to this any changes to group membership made directly in the Databricks Account won't be detected till next time group changes in AAD/Entra.
+- Change data feed desynchronization can happen on Graph API side. It's possible to get information from change feed that groups members have changed, but the API reposponsible for group changes will not see the changes yet. This is rare. To make sure this happens as rare as possible, by default graph membership check logic waits `--graph-change-feed-grace-time 30` (seconds) before making any membership check related API queries.
 
 ## Mixed Sync
 

@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set
 
@@ -138,7 +139,7 @@ class GraphAPIClient:
 
         return members
 
-    def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int):
+    def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int=1, graph_change_feed_grace_time: int=30):
         cached_group_names = set(Cache(path='cache_group.json').keys())
         group_names = set(group_names or [])
         new_group_names = group_names.difference(cached_group_names)
@@ -180,6 +181,8 @@ class GraphAPIClient:
                     logger.info(f"Incremental mode: group change: {name}")
                     to_sync_groups.add(name)
 
+        logger.info(f"Waiting {graph_change_feed_grace_time} second(s) for graph API to stabilize...")
+        time.sleep(graph_change_feed_grace_time)
         sync_obj = self.get_objects_for_sync(group_names=to_sync_groups,
                                              group_search_depth=group_search_depth)
         return delta_link, sync_obj

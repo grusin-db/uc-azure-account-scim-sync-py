@@ -46,13 +46,18 @@ from .scim import get_account_client, sync
     show_default=True,
     help="defines nested group recursion search depth, default is to search only groups provided as input")
 @click.option(
+    '--graph-change-feed-grace-time',
+    default=30,
+    show_default=True,
+    help="time in seconds to wait before checking membership of groups detected in incremental mode")
+@click.option(
     '--full-sync',
     default=False,
     is_flag=True,
     show_default=True,
     help="synchronizes all groups defined in `groups-json-file` instead of using graph api change feed")
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads,
-             save_graph_response_json, query_graph_only, group_search_depth, full_sync):
+             save_graph_response_json, query_graph_only, group_search_depth, full_sync, graph_change_feed_grace_time):
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
@@ -91,7 +96,7 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         incremental_token_cache = Cache(path="graph_incremental_token.json")
         delta_link = incremental_token_cache.get('delta_link')
         delta_link, stuff_to_sync = graph_client.get_objects_for_sync_incremental(
-            delta_link=delta_link, group_names=aad_groups, group_search_depth=group_search_depth)
+            delta_link=delta_link, group_names=aad_groups, group_search_depth=group_search_depth, graph_change_feed_grace_time=graph_change_feed_grace_time)
 
     if save_graph_response_json:
         stuff_to_sync.save_to_json_file(save_graph_response_json)
