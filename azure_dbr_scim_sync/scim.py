@@ -417,11 +417,13 @@ def create_or_update_service_principals(client: AccountClient,
 # Sync
 #
 
+
 # https://stackoverflow.com/questions/312443/how-do-i-split-a-list-into-equally-sized-chunks/22045226#22045226
 def _chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield list(lst[i:i + n])
+
 
 def sync(*,
          account_client: AccountClient,
@@ -476,17 +478,10 @@ def sync(*,
     assert len(graph_to_dbr_ids) == len(dbr_to_graph_ids)
 
     # deep sync group names
-    group_name_to_external_ids = {
-        u.desired.display_name: u.external_id
-        for u in result.groups
-    }
+    group_name_to_external_ids = {u.desired.display_name: u.external_id for u in result.groups}
 
-    deep_sync_group_external_ids = set(
-        group_name_to_external_ids[u]
-        for u in deep_sync_group_names
-    )
+    deep_sync_group_external_ids = set(group_name_to_external_ids[u] for u in deep_sync_group_names)
     assert len(deep_sync_group_names) == len(deep_sync_group_external_ids)
-
 
     # check which group members to add or remove
     for group_merge_result in result.groups:
@@ -535,10 +530,9 @@ def sync(*,
             add_chunks = list(_chunks(list(to_add_member_dbr_ids), 50))
             for ac in add_chunks:
                 patch_operations.append(
-                    iam.Patch(op=iam.PatchOp.ADD,
-                            value={'members': [{
-                                'value': x
-                            } for x in ac]}))
+                    iam.Patch(op=iam.PatchOp.ADD, value={'members': [{
+                        'value': x
+                    } for x in ac]}))
 
         if to_delete_member_dbr_ids:
             patch_operations.extend([

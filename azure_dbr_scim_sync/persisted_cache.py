@@ -1,10 +1,10 @@
+import copy
 import json
 import logging
 import os
 from threading import RLock
 
 import fsspec
-import copy
 from adlfs import AzureBlobFileSystem
 
 logger = logging.getLogger('sync.cache')
@@ -65,15 +65,15 @@ class Cache:
     def get(self, key):
         with self._lock:
             return self._data.get(key)
-        
+
     def items(self):
         with self._lock:
             return copy.deepcopy(self._data).items()
-        
+
     def keys(self):
         with self._lock:
             return copy.deepcopy(self._data).keys()
-        
+
     def values(self):
         with self._lock:
             return copy.deepcopy(self._data).values()

@@ -1,7 +1,7 @@
 import logging
-from typing import Dict, List, Optional, Set, Any
-import json
 import os
+from copy import deepcopy
+from typing import Any, Dict, List, Optional, Set
 
 import requests
 from azure.identity import DefaultAzureCredential, DeviceCodeCredential
@@ -9,7 +9,7 @@ from databricks.sdk.service import iam
 from pydantic import AliasChoices, BaseModel, Field
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from copy import deepcopy
+
 from .persisted_cache import Cache
 
 logger = logging.getLogger('sync.graph')
@@ -65,6 +65,7 @@ class GraphSyncObject(BaseModel):
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(self.model_dump_json(indent=4))
 
+
 class GraphAPIClient:
 
     def __init__(self, tenant_id: str = None, spn_id: str = None, spn_key: str = None):
@@ -93,12 +94,13 @@ class GraphAPIClient:
         self._authenticate()
 
     def _authenticate(self):
-        if os.environ.get('AZURE_CLIENT_ID') == 'DeviceCodeAuth' and os.environ.get('AZURE_CLIENT_SECRET') == 'DeviceCodeAuth':
+        if os.environ.get('AZURE_CLIENT_ID') == 'DeviceCodeAuth' and os.environ.get(
+                'AZURE_CLIENT_SECRET') == 'DeviceCodeAuth':
             logger.info("Using device authentication auth!")
             credential = DeviceCodeCredential()
         else:
             credential = DefaultAzureCredential()
-        
+
         self._token = credential.get_token('https://graph.microsoft.com/.default')
         self._header = {"Authorization": f"Bearer {self._token.token}"}
         self._base_url = "https://graph.microsoft.com/"
@@ -122,10 +124,10 @@ class GraphAPIClient:
                           select="id,displayName,mail,mailNickname,appId,accountEnabled") -> dict:
         members = []
         query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
-        
+
         while query:
             res = self._session.get(query, headers=self._header)
-            
+
             res.raise_for_status()
 
             j = res.json()
@@ -135,25 +137,30 @@ class GraphAPIClient:
                 members.extend(value)
 
         return members
-    
+
     def get_objects_for_sync_incremental(self, delta_link: str, group_names, group_search_depth: int):
-        # take list of all groups from cache
-        # append any extra groups provided, this is needed in case these groups are not in cache yet
-        cached_group_names = set(Cache(path='cache_group.json').keys()).union(set(group_names))
-        if not cached_group_names:
-            raise ValueError("No whitelisted groups to sync defined.")
-        
-        logger.info(f"Found {len(cached_group_names)} whitelisted group(s) for incremental sync")
+        cached_group_names = set(Cache(path='cache_group.json').keys())
+        group_names = set(group_names or [])
+        new_group_names = group_names.difference(cached_group_names)
 
         to_sync_groups: Set[str] = set()
+
+        logger.debug(f"Incremental mode: cached groups    : {sorted(cached_group_names)}")
+        logger.debug(f"Incremental mode: requested groups : {sorted(group_names)}")
+        logger.debug(f"Incremental mode: new groups       : {sorted(new_group_names)}")
 
         if not delta_link:
             logger.warning("Incremental mode: initial run detected: downloading all whitelisted groups")
             to_sync_groups.update(cached_group_names)
+            to_sync_groups.update(group_names)
             query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName"
         else:
             logger.info(f"Incremental mode: delta token: ..{delta_link[-32:]}")
             query = delta_link
+
+            for g in new_group_names:
+                logger.info(f"Incremental mode: new group sync: {g}")
+                to_sync_groups.add(g)
 
         while query:
             r = self._session.get(query, headers=self._header)
@@ -161,7 +168,7 @@ class GraphAPIClient:
             j = r.json()
             next_link = j.get('@odata.nextLink')
             delta_link = j.get('@odata.deltaLink')
-            
+
             query = next_link
 
             if not next_link and not delta_link:
@@ -173,10 +180,11 @@ class GraphAPIClient:
                     logger.info(f"Incremental mode: group change: {name}")
                     to_sync_groups.add(name)
 
-        sync_obj = self.get_objects_for_sync(group_names=to_sync_groups, group_search_depth=group_search_depth)
+        sync_obj = self.get_objects_for_sync(group_names=to_sync_groups,
+                                             group_search_depth=group_search_depth)
         return delta_link, sync_obj
 
-    def get_objects_for_sync(self, group_names, group_search_depth: int=1):
+    def get_objects_for_sync(self, group_names, group_search_depth: int = 1):
         sync_data = GraphSyncObject()
         group_search_depth = int(group_search_depth)
 
@@ -218,7 +226,7 @@ class GraphAPIClient:
                     raise e
 
             return sync_data.groups[id]
-        
+
         deep_sync_groups_xref: Dict[str, Dict] = {}
         visited_group_names: Set[str] = set()
 
@@ -230,7 +238,7 @@ class GraphAPIClient:
             for group_name in deepcopy(sorted(set(group_names))):
                 if group_name in visited_group_names:
                     continue
-                
+
                 visited_group_names.add(group_name)
 
                 logger.info(f"Resolving group by name: {group_name}")
@@ -267,22 +275,19 @@ class GraphAPIClient:
                         sync_data.errors.append((m, r))
                     else:
                         group.members[r.id] = r
-                        r.extra_data["search_depth"] = depth+1
+                        r.extra_data["search_depth"] = depth + 1
 
-        
-        
         msg = f"Downloaded: errors={len(sync_data.errors)}, groups={len(sync_data.groups)}, users={len(sync_data.users)}, service_principals={len(sync_data.service_principals)}"
-        
+
         if sync_data.errors:
             logger.error(msg)
             raise ValueError(msg)
         else:
             logger.info(msg)
 
-        sync_data.deep_sync_group_names = sorted(list({ 
-            v['displayName']
-            for _, v in deep_sync_groups_xref.items()
-        }))
+        sync_data.deep_sync_group_names = sorted(
+            list({v['displayName']
+                  for _, v in deep_sync_groups_xref.items()}))
 
         logger.debug(f"Effective deep sync group names: {sync_data.deep_sync_group_names}")
 
