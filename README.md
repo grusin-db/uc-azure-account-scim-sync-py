@@ -122,6 +122,7 @@ Options:
                                   json-file` instead of using graph api change
                                   feed
   --help                          Show this message and exit.
+```
 
 ### Dry run sync
 
