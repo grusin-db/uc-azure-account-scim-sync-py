@@ -108,21 +108,27 @@ class GraphAPIClient:
 
     def get_group_by_name(self, name: str) -> dict:
         res = self._session.get(
-            f"https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '{name}'&$select=id,displayName",
+            f"https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '{name}'&$select=id,displayName,mailEnabled,securityEnabled",
             headers=self._header)
 
         res.raise_for_status()
 
         data = res.json().get("value")
+       
 
         if data and len(data) == 1:
-            return data[0]
+            group_info = data[0]
+            # https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#group-types-in-microsoft-entra-id-and-microsoft-graph
+            if group_info.get('mailEnabled') == False and group_info.get('securityEnabled') == True:
+                return group_info
+            
+            logger.warning(f"Skipping non security group '{name}': {data}")
 
         return None
 
     def get_group_members(self,
                           group_id: str,
-                          select="id,displayName,mail,mailNickname,appId,accountEnabled") -> dict:
+                          select="id,displayName,mail,mailNickname,appId,accountEnabled,mailEnabled,securityEnabled") -> dict:
         members = []
         query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
 
@@ -225,9 +231,13 @@ class GraphAPIClient:
             id = d['id']
             if id not in sync_data.groups:
                 try:
-                    obj = GraphGroup.model_validate(d)
-                    sync_data.groups[id] = obj
-                    logger.debug(f"Downloaded GraphGroup: {obj}")
+                    if d.get('mailEnabled') == False and d.get('securityEnabled') == True:
+                        obj = GraphGroup.model_validate(d)
+                        sync_data.groups[id] = obj
+                        logger.debug(f"Downloaded GraphGroup: {obj}")
+                    else:
+                        logger.info(f"Skipping non security group '{d['displayName']}': {d}")
+                        return None
                 except Exception as e:
                     logger.error(f"Invalid GraphGroup: {d}", exc_info=e)
                     raise e
@@ -276,13 +286,15 @@ class GraphAPIClient:
 
                     if m['@odata.type'] == '#microsoft.graph.group':
                         r = _register_group(m)
-                        group_names.add(r.display_name)
+                        if r:
+                            group_names.add(r.display_name)
 
-                    if isinstance(r, Exception):
-                        sync_data.errors.append((m, r))
-                    else:
-                        group.members[r.id] = r
-                        r.extra_data["search_depth"] = depth + 1
+                    if r:
+                        if isinstance(r, Exception):
+                            sync_data.errors.append((m, r))
+                        else:
+                            group.members[r.id] = r
+                            r.extra_data["search_depth"] = depth + 1
 
         msg = f"Downloaded: errors={len(sync_data.errors)}, groups={len(sync_data.groups)}, users={len(sync_data.users)}, service_principals={len(sync_data.service_principals)}"
 
