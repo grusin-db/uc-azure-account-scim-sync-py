@@ -218,12 +218,27 @@ def _generic_create_or_update(mapper, desired: T, actual: T, compare_fields: Lis
 
         return ResultClass(desired=desired, actual=None, action="new", changes=[], created=created)
     else:
+
+        def _cast_to_string(value):
+            if value is None:
+                return ""
+
+            if isinstance(value, str):
+                return value
+
+            if isinstance(value, bool):
+                return "true" if value else "false"
+
+            return str(value)
+
         assert actual.id
         actual_dict = actual.as_dict()
 
         operations = [
-            iam.Patch(op=iam.PatchOp.REPLACE, path=field_name, value=desired_dict[field_name])
-            for field_name in compare_fields if desired_dict[field_name] != actual_dict.get(field_name)
+            iam.Patch(op=iam.PatchOp.REPLACE,
+                      path=field_name,
+                      value=_cast_to_string(desired_dict[field_name])) for field_name in compare_fields
+            if _cast_to_string(desired_dict[field_name]) != _cast_to_string(actual_dict.get(field_name))
         ]
 
         if operations:
