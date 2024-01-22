@@ -114,21 +114,22 @@ class GraphAPIClient:
         res.raise_for_status()
 
         data = res.json().get("value")
-       
 
         if data and len(data) == 1:
             group_info = data[0]
             # https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#group-types-in-microsoft-entra-id-and-microsoft-graph
             if group_info.get('mailEnabled') == False and group_info.get('securityEnabled') == True:
                 return group_info
-            
+
             logger.warning(f"Skipping non security group '{name}': {data}")
 
         return None
 
-    def get_group_members(self,
-                          group_id: str,
-                          select="id,displayName,mail,mailNickname,appId,accountEnabled,mailEnabled,securityEnabled") -> dict:
+    def get_group_members(
+            self,
+            group_id: str,
+            select="id,displayName,mail,mailNickname,appId,accountEnabled,mailEnabled,securityEnabled"
+    ) -> dict:
         members = []
         query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
 
@@ -164,7 +165,10 @@ class GraphAPIClient:
             logger.warning("Incremental mode: initial run detected: downloading all whitelisted groups")
             to_sync_groups.update(cached_group_names)
             to_sync_groups.update(group_names)
-            query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName"
+            # $deltatoken=latest, is "sync from now mode"
+            # effectively it is imediately giving delta token, without need of paganation of all AAD state
+            # docs: https://learn.microsoft.com/en-us/graph/delta-query-overview#use-delta-query-to-track-changes-in-a-resource-collection
+            query = f"{self._base_url}/v1.0/groups/delta/?$select=members,id,displayName&$deltatoken=latest"
         else:
             logger.info(f"Incremental mode: delta token: ..{delta_link[-32:]}")
             query = delta_link
