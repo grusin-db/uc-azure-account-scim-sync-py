@@ -371,4 +371,3 @@ sync_results
 
 - enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
 - enable ability to run directly from databricks workflows, with simple installer
-
