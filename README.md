@@ -62,7 +62,7 @@ Some technical facts:
 
 Limitations:
 
-- Change data feed desynchronization can happen on Graph API side. It's possible to get information from change feed that groups members have changed, but the API reposponsible for group changes will not see the changes yet. This is rare. To make sure this happens as rare as possible, by default graph membership check logic waits `--graph-change-feed-grace-time 30` (seconds) before making any membership check related API queries.
+- Change data feed desynchronization can happen on Graph API side. It's possible to get information from change feed that groups members have changed, but the API reposponsible for group membership will not see the changes yet. This is rare. To make sure this happens as rare as possible, by default graph membership check logic waits 30 (seconds) before making any membership check related API queries.
 - [Users change feed](https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0) is not implemented yet. As a consequence changes to users who are not a part of a group will not be detected. This will yield issues in situations:
   - When user gets deactived/deleted in AAD/Entra and imediately removed from all the groups. As result sync will just detect that user is not member of any groups anymore, and remove the membership but it will never deactive the account because user is not synced. If user would be kept in one or more groups, then user account would be correctly deactived.
   - When user would be just deactived without changing membership, it would then be not synced till next time group membership changes due to other user being added/removed, which in turn would cause a group sync, and user account would be deactived correctly.
