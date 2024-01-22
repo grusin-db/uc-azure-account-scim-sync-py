@@ -369,7 +369,6 @@ sync_results
 
 ## Near time roadmap
 
-- enable incremental graph api change feed(https://learn.microsoft.com/en-us/graph/webhooks), so that only group members and users/spns who changed since last ran would be synced
 - enable logging of changes into JSON and DELTA format (running from databricks workflow would be required)
 - enable ability to run directly from databricks workflows, with simple installer
 
