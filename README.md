@@ -58,7 +58,7 @@ Some technical facts:
 
 - Internally all cached groups (contents of `cache_groups.json`) are used to determine the names of groups for syncing.
 - When optional `--groups-json-file <file>` parameter is provided, any new groups defined will be fully synced on a first run. Groups that are already in cache wont have any significance, hence it's allowed to execute command perpectually with the same file, and it will have no effect on consequtive runs.
-- Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full syn again.
+- Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full sync again, as if the incremental mode was ran for the first time.
 
 Limitations:
 
