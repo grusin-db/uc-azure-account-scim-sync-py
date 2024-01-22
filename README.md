@@ -46,20 +46,19 @@ To run the incremental sync follow these steps:
 
 - Authenticate: [Authentication steps described in section below](#authentication)
 - (Optionally) For the first run, create `json` file containing the list of AAD groups names you would like to add to sync, and save it to `groups_to_sync.json` (for reference, see `examples/groups_to_sync.json`). 
-- Run sync with dry run first: `azure_dbr_scim_sync --dry-run-security-principals --dry-run-members --full-sync`.
+- Run sync with dry run first: `azure_dbr_scim_sync --dry-run-security-principals --dry-run-members`.
   - (optionally) add `--groups-json-file groups_to_sync.json` to use the file with groups, consequtive runs don't need this file anymore.
-- To get more information about the process add:
+- To get more information about the process:
   - `--verbose` (display groups to be synced, new grups for full sync, also logs information also about identities that did not change, by default only changes are logged)
   - or `--debug` (very detail, incl. api calls)
 - Follow the prompts on the screen with regards to how to proceed with the [dry run](#dry-run-sync) levels.
-  - If suggested list of changes look like what you would expect run without proposed `--dry-run-...` parameter(s)
-- Repeat the steps again, but on bigger list of groups by adding more groups to `groups_to_sync.json` and run the process with `--groups-json-file` parameter.
-
+  - If suggested list of changes look like what you would expect run without `--dry-run...` parameter(s)
+- Repeat the steps again, but on bigger list of groups by adding more groups to `groups_to_sync.json`.
 Some technical facts:
 
 - Internally all cached groups (contents of `cache_groups.json`) are used to determine the names of groups for syncing.
 - When optional `--groups-json-file <file>` parameter is provided, any new groups defined will be fully synced on a first run. Groups that are already in cache wont have any significance, hence it's allowed to execute command perpectually with the same file, and it will have no effect on consequtive runs.
-- Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full sync.
+- Graph API incremental token is saved in `graph_incremental_token.json` file after each successfull sync. Deleting this file will cause full syn again.
 
 Limitations:
 
