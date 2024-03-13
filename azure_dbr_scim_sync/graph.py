@@ -117,8 +117,9 @@ class GraphAPIClient:
 
         if data and len(data) == 1:
             group_info = data[0]
+            # only allow security groups, skip email only groups
             # https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#group-types-in-microsoft-entra-id-and-microsoft-graph
-            if group_info.get('mailEnabled') == False and group_info.get('securityEnabled') == True:
+            if group_info.get('securityEnabled') == True:
                 return group_info
 
             logger.warning(f"Skipping non security group '{name}': {data}")
@@ -235,7 +236,7 @@ class GraphAPIClient:
             id = d['id']
             if id not in sync_data.groups:
                 try:
-                    if d.get('mailEnabled') == False and d.get('securityEnabled') == True:
+                    if d.get('securityEnabled') == True:
                         obj = GraphGroup.model_validate(d)
                         sync_data.groups[id] = obj
                         logger.debug(f"Downloaded GraphGroup: {obj}")
