@@ -25,9 +25,11 @@ class GraphBase(BaseModel):
 class GraphUser(GraphBase):
     mail: str = Field(validation_alias=AliasChoices('mail', 'mailNickname'))
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
+    user_principal_name: str = Field(validation_alias=AliasChoices('userPrincipalName'))
+    user_type: str = Field(validation_alias=AliasChoices('userType'))
 
     def to_sdk_user(self):
-        return iam.User(user_name=self.mail,
+        return iam.User(user_name=self.mail if self.user_type == 'Guest' else self.user_principal_name,
                         display_name=self.display_name,
                         active=self.active,
                         external_id=self.id)
@@ -128,7 +130,7 @@ class GraphAPIClient:
     def get_group_members(
             self,
             group_id: str,
-            select="id,displayName,mail,mailNickname,appId,accountEnabled,mailEnabled,securityEnabled"
+            select="id,displayName,mail,mailNickname,appId,accountEnabled,mailEnabled,securityEnabled,userPrincipalName,userType"
     ) -> dict:
         members = []
         query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
