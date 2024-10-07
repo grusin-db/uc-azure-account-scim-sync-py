@@ -141,7 +141,7 @@ The sync tool offers two dry run modes, allowing to first see, and then approve 
 
 Sync tool needs authentication in order to connect to **AAD**, **Azure Databricks Account**, and **Azure Datalake Storage Gen2** for cache purpose.
 
-It's highly recommended to first trying running the tool from your local user account, directly from your laptop/pc/mac/rasperypi :) and once it works switch over to devops and there run it as service principal. 
+It's highly recommended to first trying running the tool from your local user account, directly from your laptop/pc/mac/rasperypi :) and once it works switch over to devops and there run it as service principal.
 
 The authentication is decoupled from the sync logic, hence it's possible to change way of authentication (user vs. service principal auth) via change of enviroment settings/variables without need of changing any code. Please read more about it in respective sections below.
 
@@ -252,18 +252,24 @@ It is possible to run the sync code directly from databricks notebook, in order 
 - install the wheel file on a cluster / session scope notebook
 - use [files in repos](https://www.databricks.com/blog/2021/10/07/databricks-repos-is-now-generally-available.html) or [workspace files](https://docs.databricks.com/en/delta-live-tables/import-workspace-files.html) functionality to `import azure_dbr_scim_sync`
 
-Ensure that notebook dependencies are installed
+Ensure that notebook dependencies are installed:
+
+- ipydagred3 networkx are only needed for visualisation inside of a notebook
+- other libraries should match the version defined in setup.py
+
 ```python
-%pip install pydantic==2.3.0 pyyaml==6.0.1 databricks-sdk==0.9.0 requests click==8.1.7 coloredlogs==15.0.1 joblib fsspec==2023.9.2 adlfs==2023.9.0 azure-identity==1.15.0 ipydagred3 networkx
+
+%pip install pydantic==2.6.4 databricks-sdk==0.33.0 databricks-labs-blueprint==0.9.0 requests click==8.1.7 fsspec==2023.9.2 adlfs==2023.9.0 azure-identity==1.15.0 ipydagred3 networkx
 dbutils.library.restartPython()
 ```
 
 ### Enable logging when running from notebook
+
 ```python
 import logging
 import sys
 import os
-import coloredlogs
+from databricks.labs.blueprint.logger import install_logger
 
 # debug and verbose can be very chatty
 # dial down to verbose=True (or False)
@@ -271,13 +277,8 @@ import coloredlogs
 verbose = False
 debug = False
 
-logging.basicConfig(stream=sys.stdout,
-                        level=logging.INFO,
-                        format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
+install_logger()
 logger = logging.getLogger('sync')
-
-# colored logs sets all loggers to this level
-coloredlogs.install(level=logging.DEBUG)
 logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
 logging.getLogger('py4j').setLevel(logging.ERROR)
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
