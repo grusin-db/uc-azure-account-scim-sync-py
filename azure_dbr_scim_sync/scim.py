@@ -10,7 +10,8 @@ from typing import Callable, Generic, Iterable, List, TypeVar
 from databricks.sdk import AccountClient
 from databricks.sdk.core import DatabricksError
 from databricks.sdk.service import iam
-from joblib import Parallel, delayed
+from databricks.labs.blueprint.parallel import Threads
+from functools import partial
 
 from .persisted_cache import Cache
 from .version import __version__
@@ -183,10 +184,12 @@ def _delete_if_exists_by_human_name(mapper, sdk_module, search_name):
 
 
 def _delete_if_exists_by_human_name_parallel(mapper, sdk_module, search_names, worker_threads):
-    Parallel(backend='threading', verbose=100,
-             n_jobs=worker_threads)(delayed(_delete_if_exists_by_human_name)(mapper, sdk_module, search_name)
-                                    for search_name in search_names)
+    tasks = [
+        partial(_delete_if_exists_by_human_name)(mapper, sdk_module, search_name)
+                                    for search_name in search_names
+    ]
 
+    Threads.strict("delete_by_name", tasks)
 
 def _generic_create_or_update(mapper, desired: T, actual: T, compare_fields: List[str], sdk_module,
                               dry_run: bool) -> T:
@@ -266,8 +269,12 @@ def _generic_create_or_update_parallel(client: AccountClient,
                                        worker_threads: int = 3):
     logger.info(f"[{dry_run=}] Starting processing: total={len(desired_objs)}")
 
-    merge_results: List[MergeResult[T]] = Parallel(backend='threading', verbose=100, n_jobs=worker_threads)(
-        delayed(create_fun)(client, desired, dry_run) for desired in desired_objs)
+    tasks = [
+        partial(create_fun, client, desired, dry_run) 
+        for desired in desired_objs
+    ]
+
+    merge_results: List[MergeResult[T]] = Threads.strict("create_or_update", tasks)
 
     total_change_count = sum(x.effecitve_change_count for x in merge_results)
     logger.info(f"[{dry_run=}] Finished processing, changes={total_change_count}, total={len(desired_objs)}")

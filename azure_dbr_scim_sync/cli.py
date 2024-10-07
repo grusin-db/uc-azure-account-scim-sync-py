@@ -3,11 +3,13 @@ import logging
 import sys
 
 import click
-import coloredlogs
+from databricks.labs.blueprint.logger import install_logger
 
 from .graph import GraphAPIClient
 from .persisted_cache import Cache
 from .scim import get_account_client, sync
+
+
 
 
 @click.command()
@@ -59,13 +61,9 @@ from .scim import get_account_client, sync
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads,
              save_graph_response_json, query_graph_only, group_search_depth, full_sync,
              graph_change_feed_grace_time):
-    logging.basicConfig(stream=sys.stdout,
-                        level=logging.INFO,
-                        format='%(asctime)s %(levelname)s %(threadName)s [%(name)s] %(message)s')
-    logger = logging.getLogger('sync')
+    install_logger()
 
-    # colored logs sets all loggers to this level
-    coloredlogs.install(level=logging.DEBUG)
+    logger = logging.getLogger('sync')
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
         logging.DEBUG if debug else logging.WARNING)
