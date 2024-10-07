@@ -163,7 +163,7 @@ def _generic_get_by_human_name(mapper, sdk_module, search_name):
         cache.invalidate(search_name)
 
     # cache miss or cache poison scenario
-    res = list(sdk_module.list(filter=f"{key_api_field} eq '{search_name}'") or [])
+    res = list(sdk_module.list(filter=f'{key_api_field} eq "{search_name}"') or [])
     if res and len(res) == 1:
         obj = res[0]
         cache[search_name] = obj.id
