@@ -26,7 +26,7 @@ class GraphUser(GraphBase):
     mail: str = Field(validation_alias=AliasChoices('mail', 'mailNickname'))
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
     user_principal_name: str = Field(validation_alias=AliasChoices('userPrincipalName'))
-    user_type: str = Field(validation_alias=AliasChoices('userType'))
+    user_type: Optional[str] = Field(validation_alias=AliasChoices('userType'), default=None)
 
     def to_sdk_user(self):
         return iam.User(user_name=self.mail if self.user_type == 'Guest' else self.user_principal_name,
