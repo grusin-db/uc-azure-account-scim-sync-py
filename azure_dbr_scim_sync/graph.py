@@ -23,13 +23,16 @@ class GraphBase(BaseModel):
 
 
 class GraphUser(GraphBase):
-    mail: str = Field(validation_alias=AliasChoices('mail', 'mailNickname'))
+    mail: Optional[str] = Field(validation_alias=AliasChoices('mail', 'mailNickname'), default=None)
     active: bool = Field(validation_alias=AliasChoices('accountEnabled'), default=True)
     user_principal_name: str = Field(validation_alias=AliasChoices('userPrincipalName'))
     user_type: Optional[str] = Field(validation_alias=AliasChoices('userType'), default=None)
 
     def to_sdk_user(self):
-        return iam.User(user_name=self.mail if self.user_type == 'Guest' else self.user_principal_name,
+        user_name = self.mail if self.mail and self.user_type == 'Guest' else self.user_principal_name
+        assert user_name
+
+        return iam.User(user_name=user_name,
                         display_name=self.display_name,
                         active=self.active,
                         external_id=self.id)
