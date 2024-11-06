@@ -58,9 +58,21 @@ from .scim import get_account_client, sync
     is_flag=True,
     show_default=True,
     help="synchronizes all groups defined in `groups-json-file` instead of using graph api change feed")
+@click.option(
+    '--include-non-security-groups',
+    default=False,
+    is_flag=True,
+    show_default=True,
+    help="include non-security Entra groups in the sync")
+@click.option(
+    '--include-mail-enabled-groups',
+    default=False,
+    is_flag=True,
+    show_default=True,
+    help="include mail-enabled Entra groups in the sync")
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads,
              save_graph_response_json, query_graph_only, group_search_depth, full_sync,
-             graph_change_feed_grace_time):
+             graph_change_feed_grace_time, include_non_security_groups, include_mail_enabled_groups):
     install_logger()
 
     logger = logging.getLogger('sync')
@@ -71,7 +83,10 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
     if verbose:
         logger.setLevel(logging.DEBUG)
 
-    graph_client = GraphAPIClient()
+    graph_client = GraphAPIClient(
+        include_mail_enabled_groups=include_mail_enabled_groups,
+        include_non_security_groups=include_non_security_groups
+    )
     account_client = get_account_client()
 
     if groups_json_file:
