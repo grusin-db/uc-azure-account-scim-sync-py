@@ -74,8 +74,13 @@ class GraphSyncObject(BaseModel):
 
 class GraphAPIClient:
 
-    def __init__(self, tenant_id: str = None, spn_id: str = None, spn_key: str = None):
+    def __init__(self,
+                 include_mail_enabled_groups: bool = False,
+                 include_non_security_groups: bool = False):
         self._tenant_id = None
+
+        self._include_mail_enabled_groups = include_mail_enabled_groups
+        self._include_non_security_groups = include_non_security_groups
 
         retry_strategy = Retry(
             total=6,
@@ -123,10 +128,13 @@ class GraphAPIClient:
         if data and len(data) == 1:
             group_info = data[0]
             # https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#group-types-in-microsoft-entra-id-and-microsoft-graph
-            if group_info.get('mailEnabled') == False and group_info.get('securityEnabled') == True:
+            if (
+                (group_info.get('securityEnabled') or self._include_non_security_groups) and
+                ((not group_info.get('mailEnabled')) or self._include_mail_enabled_groups)
+            ):
                 return group_info
 
-            logger.warning(f"Skipping non security group '{name}': {data}")
+            logger.warning(f"Skipping group '{name}': {data}")
 
         return None
 
@@ -240,12 +248,15 @@ class GraphAPIClient:
             id = d['id']
             if id not in sync_data.groups:
                 try:
-                    if d.get('mailEnabled') == False and d.get('securityEnabled') == True:
+                    if (
+                        (d.get('securityEnabled') or self._include_non_security_groups) and
+                        ((not d.get('mailEnabled')) or self._include_mail_enabled_groups)
+                    ):
                         obj = GraphGroup.model_validate(d)
                         sync_data.groups[id] = obj
                         logger.debug(f"Downloaded GraphGroup: {obj}")
                     else:
-                        logger.info(f"Skipping non security group '{d['displayName']}': {d}")
+                        logger.info(f"Skipping group '{d['displayName']}': {d}")
                         return None
                 except Exception as e:
                     logger.error(f"Invalid GraphGroup: {d}", exc_info=e)

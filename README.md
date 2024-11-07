@@ -34,6 +34,12 @@ There is no hard depth limit, but **caution** has to be exercised when using thi
 
 It it advised to first run `--query-graph-only` and `--save-graph-response-json results.json` parameters together in order to inspect the groups discovered during the deep search. And only continue with sync if results are below the maximum number of groups SCIM endpoint supports!
 
+## Group types
+
+By default only ["Security Groups"](https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#security-groups-and-mail-enabled-security-groups) will be included in the sync.
+This decision was made in order to [limit the number of groups included in the synchronisation](https://github.com/grusin-db/uc-azure-account-scim-sync-py/issues/9).
+[Other groups types](https://learn.microsoft.com/en-us/graph/api/resources/groups-overview?view=graph-rest-1.0&tabs=http#group-types-in-microsoft-entra-id-and-microsoft-graph) can be included using the `--include-non-security-groups` and `--include-mail-enabled-groups` flags.
+
 ## Incremental synchronization (default)
 
 Uses [Graph API change feed](https://learn.microsoft.com/en-us/graph/api/resources/change-notifications-api-overview?view=graph-rest-1.0) to determine the [groups that have changed](https://learn.microsoft.com/en-us/graph/api/group-delta?view=graph-rest-1.0&tabs=http#query-parameters) since last run. In this mode, all previously synchronized groups will be checked for changes. That means that groups that changed in AAD/Entra, but never were requested to be synced will be ignored.
@@ -127,6 +133,10 @@ Options:
   --full-sync                     synchronizes all groups defined in `groups-
                                   json-file` instead of using graph api change
                                   feed
+  --include-non-security-groups   include non-security Entra groups in the
+                                  sync  [default: False]
+  --include-mail-enabled-groups   include mail-enabled Entra groups in the
+                                  sync  [default: False]                                  
   --help                          Show this message and exit.
 ```
 
