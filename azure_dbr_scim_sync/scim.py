@@ -548,6 +548,14 @@ def sync(*,
         # create patch entries
         # https://api-docs.databricks.com/rest/latest/account-scim-api.html
         patch_operations = []
+
+        # first delete members, to resolve itermitent circle of A in B group membership changing into B in A.
+        if to_delete_member_dbr_ids:
+            patch_operations.extend([
+                iam.Patch(op=iam.PatchOp.REMOVE, path=f"members[value eq \"{x}\"]")
+                for x in to_delete_member_dbr_ids
+            ])
+
         if to_add_member_dbr_ids:
             add_chunks = list(_chunks(list(to_add_member_dbr_ids), 50))
             for ac in add_chunks:
@@ -555,12 +563,6 @@ def sync(*,
                     iam.Patch(op=iam.PatchOp.ADD, value={'members': [{
                         'value': x
                     } for x in ac]}))
-
-        if to_delete_member_dbr_ids:
-            patch_operations.extend([
-                iam.Patch(op=iam.PatchOp.REMOVE, path=f"members[value eq \"{x}\"]")
-                for x in to_delete_member_dbr_ids
-            ])
 
         if patch_operations:
             logger.info(
