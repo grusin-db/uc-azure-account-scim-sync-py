@@ -21,6 +21,12 @@ from .scim import get_account_client, sync
               show_default=True)
 @click.option('--debug', default=False, is_flag=True, help="more verbose, shows API calls", show_default=True)
 @click.option(
+    '--bulk-download',
+    default=False,
+    is_flag=True,
+    help="bulk download of users and service principals from the Databricks account, better performance with a large number of users and service principals",
+    show_default=True)
+@click.option(
     '--dry-run-security-principals',
     default=False,
     is_flag=True,
@@ -72,7 +78,7 @@ from .scim import get_account_client, sync
     help="include mail-enabled Entra groups in the sync")
 def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_run_members, worker_threads,
              save_graph_response_json, query_graph_only, group_search_depth, full_sync,
-             graph_change_feed_grace_time, include_non_security_groups, include_mail_enabled_groups):
+             graph_change_feed_grace_time, include_non_security_groups, include_mail_enabled_groups, bulk_download):
     install_logger()
 
     logger = logging.getLogger('sync')
@@ -128,6 +134,7 @@ def sync_cli(groups_json_file, verbose, debug, dry_run_security_principals, dry_
         groups=[x.to_sdk_group() for x in stuff_to_sync.groups.values()],
         service_principals=[x.to_sdk_service_principal() for x in stuff_to_sync.service_principals.values()],
         deep_sync_group_names=list(stuff_to_sync.deep_sync_group_names),
+        bulk_download=bulk_download,
         dry_run_security_principals=dry_run_security_principals,
         dry_run_members=dry_run_members,
         worker_threads=worker_threads)
