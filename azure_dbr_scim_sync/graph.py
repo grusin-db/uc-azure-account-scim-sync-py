@@ -102,7 +102,6 @@ class GraphAPIClient:
         self._TOKEN_REFRESH_INTERVAL = 15 * 60
 
         self._token = None
-        self._header = None
         self._last_auth_time = None
         self._base_url = None
 
@@ -117,7 +116,6 @@ class GraphAPIClient:
             credential = DefaultAzureCredential()
 
         self._token = credential.get_token('https://graph.microsoft.com/.default')
-        self._header = {"Authorization": f"Bearer {self._token.token}"}
         self._last_auth_time = time.time()
         self._base_url = "https://graph.microsoft.com/"
 
@@ -127,7 +125,7 @@ class GraphAPIClient:
         if elapsed_time >= self._TOKEN_REFRESH_INTERVAL:
             logger.debug(f"Time since last auth: {elapsed_time}, getting a new token")
             self._authenticate()
-        return self._header
+        return {"Authorization": f"Bearer {self._token.token}"}
 
     def get_group_by_name(self, name: str) -> dict:
         res = self._session.get(
