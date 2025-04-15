@@ -98,8 +98,11 @@ class GraphAPIClient:
                                    pool_block=True)
         self._session.mount("https://", http_adapter)
 
+        # 15 Minutes
+        self._TOKEN_REFRESH_INTERVAL = 15 * 60
+
         self._token = None
-        self._header = None
+        self._last_auth_time = None
         self._base_url = None
 
         self._authenticate()
@@ -113,13 +116,21 @@ class GraphAPIClient:
             credential = DefaultAzureCredential()
 
         self._token = credential.get_token('https://graph.microsoft.com/.default')
-        self._header = {"Authorization": f"Bearer {self._token.token}"}
+        self._last_auth_time = time.time()
         self._base_url = "https://graph.microsoft.com/"
+
+    def _get_header(self):
+        # Check if 15 minutes have passed
+        elapsed_time = time.time() - self._last_auth_time
+        if elapsed_time >= self._TOKEN_REFRESH_INTERVAL:
+            logger.debug(f"Time since last auth: {elapsed_time}, getting a new token")
+            self._authenticate()
+        return {"Authorization": f"Bearer {self._token.token}"}
 
     def get_group_by_name(self, name: str) -> dict:
         res = self._session.get(
             f"https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '{name}'&$select=id,displayName,mailEnabled,securityEnabled",
-            headers=self._header)
+            headers=self._get_header())
 
         res.raise_for_status()
 
@@ -147,7 +158,7 @@ class GraphAPIClient:
         query = f"{self._base_url}/beta/groups/{group_id}/members?$select={select}"
 
         while query:
-            res = self._session.get(query, headers=self._header)
+            res = self._session.get(query, headers=self._get_header())
 
             res.raise_for_status()
 
@@ -191,7 +202,7 @@ class GraphAPIClient:
                 to_sync_groups.add(g)
 
         while query:
-            r = self._session.get(query, headers=self._header)
+            r = self._session.get(query, headers=self._get_header())
             r.raise_for_status()
             j = r.json()
             next_link = j.get('@odata.nextLink')
